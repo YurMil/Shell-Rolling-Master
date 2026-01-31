@@ -11,7 +11,15 @@ export interface ShellParameters {
     thickness: number;
     kFactor: number;
     gap: number; // Welding gap
-    bendLines: number;
+    bendLinesEnabled: boolean;
+    bendLinesCount: number;
+}
+
+export interface BendLine {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
 }
 
 export interface CalculationResult {
@@ -23,6 +31,14 @@ export interface CalculationResult {
     angle?: number;
     rOut?: number;
     rIn?: number;
+    patternRotationDeg?: number;
     shape: 'rect' | 'sector';
     error?: string;
+    bendLines?: BendLine[];
+    bendStep?: number;
+    // Bounding box for flat pattern
+    bboxWidth?: number;
+    bboxHeight?: number;
+    bboxMinX?: number;
+    bboxMinY?: number;
 }

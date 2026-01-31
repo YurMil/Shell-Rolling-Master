@@ -1,5 +1,6 @@
 
 import type { ShellParameters, CalculationResult } from '../features/calculator/types';
+import { getConePatternAngles, getConePatternPoints } from './cone-pattern';
 
 export class DxfWriter {
     private content: string[] = [];
@@ -10,7 +11,21 @@ export class DxfWriter {
 
     private header() {
         this.content.push("0", "SECTION", "2", "HEADER", "0", "ENDSEC");
-        this.content.push("0", "SECTION", "2", "TABLES", "0", "ENDSEC");
+        this.content.push("0", "SECTION", "2", "TABLES");
+        this.content.push("0", "TABLE", "2", "LTYPE", "70", "1");
+        this.content.push(
+            "0", "LTYPE",
+            "2", "DASHED",
+            "70", "0",
+            "3", "Dashed __ __ __",
+            "72", "65",
+            "73", "2",
+            "40", "0.6",
+            "49", "0.3",
+            "49", "-0.3"
+        );
+        this.content.push("0", "ENDTAB");
+        this.content.push("0", "ENDSEC");
         this.content.push("0", "SECTION", "2", "BLOCKS", "0", "ENDSEC");
         this.content.push("0", "SECTION", "2", "ENTITIES");
     }
@@ -19,6 +34,17 @@ export class DxfWriter {
         this.content.push(
             "0", "LINE",
             "8", layer,
+            "10", x1.toFixed(4), "20", y1.toFixed(4), "30", "0.0",
+            "11", x2.toFixed(4), "21", y2.toFixed(4), "31", "0.0"
+        );
+    }
+
+    public addBendLine(x1: number, y1: number, x2: number, y2: number, layer: string = "BEND") {
+        this.content.push(
+            "0", "LINE",
+            "8", layer,
+            "6", "DASHED",
+            "62", "1",
             "10", x1.toFixed(4), "20", y1.toFixed(4), "30", "0.0",
             "11", x2.toFixed(4), "21", y2.toFixed(4), "31", "0.0"
         );
@@ -47,44 +73,15 @@ export class DxfWriter {
         this.addLine(x, y + h, x, y);
     }
 
-    public addConePattern(rOut: number, rIn: number, angle: number) {
-        // Logic for Cone Sector
-        // Arc centers at (0,0)
-        // Start Angle = -angle/2 + 90 (DXF 0 is East, SVG -90 was top. Let's align with standard math)
-        // Standard Math: 0 is East. Top is 90.
-        // Our PatternView logic: Top is -90 degrees in SVG rotation?
-        // Wait, let's stick to standard 0 = East.
-        // If we want the shape centered upwards:
-        // Bisector is at 90 deg.
-        // Start = 90 + angle/2
-        // End = 90 - angle/2 (Wait, Arcs are CCW)
-        // So Start = 90 - angle/2
-        // End = 90 + angle/2
+    public addConePattern(rOut: number, rIn: number, angle: number, rotationDeg?: number) {
+        const { startAngleDeg, endAngleDeg } = getConePatternAngles(angle, rotationDeg);
+        const { outerStart, outerEnd, innerStart, innerEnd } = getConePatternPoints(rOut, rIn, angle, rotationDeg);
 
-        const startDeg = 90 - angle / 2;
-        const endDeg = 90 + angle / 2;
+        this.addArc(0, 0, rOut, startAngleDeg, endAngleDeg);
+        this.addArc(0, 0, rIn, startAngleDeg, endAngleDeg);
 
-        // Arcs
-        this.addArc(0, 0, rOut, startDeg, endDeg);
-        this.addArc(0, 0, rIn, startDeg, endDeg);
-
-        // Lines connecting endpoints
-        const rad = (deg: number) => deg * Math.PI / 180;
-
-        const x1_out = rOut * Math.cos(rad(startDeg));
-        const y1_out = rOut * Math.sin(rad(startDeg));
-
-        const x1_in = rIn * Math.cos(rad(startDeg));
-        const y1_in = rIn * Math.sin(rad(startDeg));
-
-        const x2_out = rOut * Math.cos(rad(endDeg));
-        const y2_out = rOut * Math.sin(rad(endDeg));
-
-        const x2_in = rIn * Math.cos(rad(endDeg));
-        const y2_in = rIn * Math.sin(rad(endDeg));
-
-        this.addLine(x1_in, y1_in, x1_out, y1_out); // Left Side
-        this.addLine(x2_in, y2_in, x2_out, y2_out); // Right Side (Wait, direction matters? No, lines are bidirectional visually)
+        this.addLine(innerStart.x, innerStart.y, outerStart.x, outerStart.y);
+        this.addLine(innerEnd.x, innerEnd.y, outerEnd.x, outerEnd.y);
     }
 
     public toDxfString(): string {
@@ -100,7 +97,13 @@ export const generateUnfoldedDxf = (state: ShellParameters, result: CalculationR
         dxf.addRect(result.flatLength, result.flatWidth);
     } else {
         if (result.rOut && result.rIn && result.angle) {
-            dxf.addConePattern(result.rOut, result.rIn, result.angle);
+            dxf.addConePattern(result.rOut, result.rIn, result.angle, result.patternRotationDeg);
+        }
+    }
+
+    if (result.bendLines && result.bendLines.length > 0) {
+        for (const line of result.bendLines) {
+            dxf.addBendLine(line.x1, line.y1, line.x2, line.y2);
         }
     }
     return dxf.toDxfString();

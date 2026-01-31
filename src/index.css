@@ -4,6 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent scrollbars on the main window */
+}
+
 :root {
   font-family: 'Roboto', 'Inter', sans-serif;
   line-height: 1.5;
