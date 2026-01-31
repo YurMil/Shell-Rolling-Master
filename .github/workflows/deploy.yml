@@ -1,0 +1,43 @@
+name: Deploy Game to Website
+
+# Срабатывать при пуше в ветку main
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Скачиваем код игры
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      # 2. Ставим Node.js
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3. Устанавливаем зависимости и собираем
+      - name: Install and Build
+        run: |
+          npm ci
+          npm run build
+          mv dist/index.html dist/app.html
+        # Теперь у нас есть папка dist с готовой игрой
+
+      # 4. Отправляем папку dist в репозиторий сайта
+      - name: Push to Website Repository
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          # Тот самый секрет, который мы создали
+          API_TOKEN_GITHUB: ${{ secrets.DEPLOY_TOKEN }}
+        with:
+          source-directory: 'dist'                    
+          destination-github-username: 'Biosxxx'
+          destination-repository-name: 'cadautoscript.com'
+          target-directory: 'static/utilities/cylindrical-shell-rolling' # Куда положить код         
+          user-email: 'bot@pvt-game.com'
+          target-branch: main
