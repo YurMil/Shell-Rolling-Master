@@ -38,6 +38,6 @@ jobs:
           source-directory: 'dist'                    
           destination-github-username: 'Biosxxx'
           destination-repository-name: 'cadautoscript.com'
-          target-directory: 'static/utilities/cylindrical-shell-rolling' # Куда положить код         
+          target-directory: 'static/utility-apps/cylindrical-shell-rolling' # Куда положить код         
           user-email: 'bot@pvt-game.com'
           target-branch: main
