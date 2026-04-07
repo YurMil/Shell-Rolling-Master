@@ -4,19 +4,14 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { ShellMesh } from './ShellMesh';
 import * as THREE from 'three';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { ViewCube } from './ViewCube';
-
-// Store for sharing camera state between canvases
-interface CameraState {
-    quaternion: THREE.Quaternion;
-    target: THREE.Vector3;
-}
 
 // Camera controller that handles auto-fit and view changes
 const CameraController: React.FC<{
     onCameraUpdate: (quaternion: THREE.Quaternion) => void;
     viewPosition: [number, number, number] | null;
-    controlsRef: React.MutableRefObject<any>;
+    controlsRef: React.RefObject<OrbitControlsImpl | null>;
 }> = ({ onCameraUpdate, viewPosition, controlsRef }) => {
     const { camera, scene } = useThree();
     const targetRef = useRef(new THREE.Vector3(0, 0, 0));
@@ -110,7 +105,7 @@ const CameraController: React.FC<{
 export const Scene: React.FC = () => {
     const [cameraQuaternion, setCameraQuaternion] = useState(() => new THREE.Quaternion());
     const [viewPosition, setViewPosition] = useState<[number, number, number] | null>(null);
-    const controlsRef = useRef<any>(null);
+    const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
     const handleCameraUpdate = useCallback((quaternion: THREE.Quaternion) => {
         setCameraQuaternion(quaternion);

@@ -1,7 +1,5 @@
 import * as THREE from 'three';
-import type { SpecType } from '../../calculator/types';
-
-const DEFAULT_VISUAL_K_FACTOR = 0.44;
+import { computeShellSolidGeometry } from '../../../utils/shell-solid-geometry';
 
 interface ShellGeometryParams {
     r1_neutral: number;
@@ -9,7 +7,6 @@ interface ShellGeometryParams {
     height: number;
     thickness: number;
     gap: number;
-    specType: SpecType;
     kFactor?: number;
 }
 
@@ -82,7 +79,7 @@ const createThickShellGeometry = (
 };
 
 export const buildShellGeometry = (params: ShellGeometryParams): THREE.BufferGeometry => {
-    const { r1_neutral, r2_neutral, height, thickness, gap, specType, kFactor = DEFAULT_VISUAL_K_FACTOR } = params;
+    const { r1_neutral, r2_neutral, height, thickness, gap, kFactor } = params;
 
     const isValid = (val: number): boolean => typeof val === 'number' && isFinite(val) && val > 0;
 
@@ -91,22 +88,19 @@ export const buildShellGeometry = (params: ShellGeometryParams): THREE.BufferGeo
         return new THREE.BufferGeometry();
     }
 
-    let r1_inner = 0;
-    let r1_outer = 0;
-    let r2_inner = 0;
-    let r2_outer = 0;
+    const solidGeometry = computeShellSolidGeometry({
+        r1Neutral: r1_neutral,
+        r2Neutral: r2_neutral,
+        height,
+        thickness,
+        gap,
+        kFactor,
+    });
 
-    if (specType === 'ID') {
-        r1_inner = r1_neutral - 2 * kFactor * thickness;
-        r1_outer = r1_inner + thickness;
-        r2_inner = r2_neutral - 2 * kFactor * thickness;
-        r2_outer = r2_inner + thickness;
-    } else {
-        r1_outer = r1_neutral + 2 * kFactor * thickness;
-        r1_inner = r1_outer - thickness;
-        r2_outer = r2_neutral + 2 * kFactor * thickness;
-        r2_inner = r2_outer - thickness;
-    }
+    let r1_inner = solidGeometry.topInnerRadius;
+    const r1_outer = solidGeometry.topOuterRadius;
+    let r2_inner = solidGeometry.bottomInnerRadius;
+    const r2_outer = solidGeometry.bottomOuterRadius;
 
     if (r1_inner < 0.1) r1_inner = 0.1;
     if (r2_inner < 0.1) r2_inner = 0.1;
@@ -116,19 +110,13 @@ export const buildShellGeometry = (params: ShellGeometryParams): THREE.BufferGeo
         return new THREE.BufferGeometry();
     }
 
-    const circumference = Math.PI * r1_neutral;
-    let gapAngle = 0;
-
-    if (circumference > 0) {
-        gapAngle = (gap / circumference) * 2 * Math.PI;
-    }
-
-    if (gapAngle > 2 * Math.PI - 0.1) {
-        gapAngle = 2 * Math.PI - 0.1;
-    }
-
-    const thetaLength = 2 * Math.PI - gapAngle;
-    const thetaStart = Math.PI / 2 + gapAngle / 2;
-
-    return createThickShellGeometry(r1_inner, r1_outer, r2_inner, r2_outer, height, thetaStart, thetaStart + thetaLength);
+    return createThickShellGeometry(
+        r1_inner,
+        r1_outer,
+        r2_inner,
+        r2_outer,
+        height,
+        solidGeometry.thetaStart,
+        solidGeometry.thetaEnd
+    );
 };

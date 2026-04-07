@@ -5,7 +5,7 @@ import { buildShellGeometry } from './geometry/buildShellGeometry';
 import { ShellMeshBase } from './ShellMeshBase';
 
 export const ConeShellMesh: React.FC = () => {
-    const { specType, d1, d2, h, thickness, gap, kFactor, results } = useShellStore();
+    const { d1, d2, h, thickness, gap, kFactor, results } = useShellStore();
 
     const geometry = useMemo(() => {
         if (!results.isValid) {
@@ -27,10 +27,9 @@ export const ConeShellMesh: React.FC = () => {
             height: h,
             thickness,
             gap,
-            specType,
             kFactor
         });
-    }, [specType, d1, d2, h, thickness, gap, kFactor, results]);
+    }, [d1, d2, h, thickness, gap, kFactor, results]);
 
     return <ShellMeshBase geometry={geometry} />;
 };

@@ -1,10 +1,12 @@
 
 import React from 'react';
 import { useShellStore } from '../../store/useShellStore';
-import { NumberInput, Button, cn } from '../../components/ui';
+import { NumberInput, Button } from '../../components/ui';
+import { cn } from '../../components/ui/cn';
 import { ResultsCard } from './ResultsCard';
 import { FileText, Download } from 'lucide-react';
 import { version } from '../../../package.json';
+import { StepExportButton } from './StepExportButton';
 
 export const InputPanel: React.FC = () => {
     const state = useShellStore();
@@ -118,6 +120,7 @@ export const InputPanel: React.FC = () => {
                 }}>
                     <Download className="w-5 h-5" /> Download DXF
                 </Button>
+                <StepExportButton />
             </div>
 
             <div className="mt-auto p-4 text-center text-xs text-gray-600 border-t border-[#36343b]">

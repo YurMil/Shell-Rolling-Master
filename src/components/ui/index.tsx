@@ -1,11 +1,6 @@
 
 import React from 'react';
-import clsx from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: (string | undefined | null | false)[]) {
-    return twMerge(clsx(inputs));
-}
+import { cn } from './cn';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label: string;
@@ -101,4 +96,3 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({ activeView, onViewChange
         </button>
     </div>
 );
-
