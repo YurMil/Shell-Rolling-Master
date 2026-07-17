@@ -6,6 +6,7 @@ import { ShellMesh } from './ShellMesh';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { ViewCube } from './ViewCube';
+import { useShellStore } from '../../store/useShellStore';
 
 // Camera controller that handles auto-fit and view changes
 const CameraController: React.FC<{
@@ -17,59 +18,81 @@ const CameraController: React.FC<{
     const targetRef = useRef(new THREE.Vector3(0, 0, 0));
     const distanceRef = useRef(5000);
     const initialFitDone = useRef(false);
+    const needsFitRef = useRef(true);
+    const lastQuatRef = useRef(new THREE.Quaternion());
 
-    // Auto-fit camera on mount and when geometry changes
-    useEffect(() => {
-        const fitCamera = () => {
-            // Find ShellMesh in scene
-            let shellBox: THREE.Box3 | null = null;
-            scene.traverse((obj) => {
-                if (obj.type === 'Mesh' && obj.geometry && obj.geometry.attributes.position) {
-                    const box = new THREE.Box3().setFromObject(obj);
-                    if (!shellBox) {
-                        shellBox = box;
-                    } else {
-                        shellBox.union(box);
-                    }
-                }
-            });
-
-            if (shellBox && !shellBox.isEmpty()) {
-                const size = shellBox.getSize(new THREE.Vector3());
-                const center = shellBox.getCenter(new THREE.Vector3());
-                
-                const maxDim = Math.max(size.x, size.y, size.z);
-                if (maxDim > 0) {
-                    const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
-                    let distance = Math.abs(maxDim / Math.tan(fov / 2));
-                    distance *= 2.0; // Padding
-
-                    targetRef.current.copy(center);
-                    distanceRef.current = distance;
-
-                    if (!initialFitDone.current) {
-                        // Initial camera position
-                        camera.position.set(
-                            center.x + distance * 0.6,
-                            center.y + distance * 0.5,
-                            center.z + distance * 0.6
-                        );
-                        camera.lookAt(center);
-
-                        if (controlsRef.current) {
-                            controlsRef.current.target.copy(center);
-                            controlsRef.current.update();
-                        }
-                        initialFitDone.current = true;
-                    }
+    // Fit the camera to the current shell bounding box.
+    // Returns true once a valid mesh was found and the fit was applied.
+    const fitCamera = useCallback((): boolean => {
+        let shellBox: THREE.Box3 | null = null;
+        scene.traverse((obj) => {
+            if (obj.type === 'Mesh' && obj.geometry && obj.geometry.attributes.position) {
+                const box = new THREE.Box3().setFromObject(obj);
+                if (!shellBox) {
+                    shellBox = box;
+                } else {
+                    shellBox.union(box);
                 }
             }
-        };
+        });
 
-        fitCamera();
-        const interval = setInterval(fitCamera, 1000);
-        return () => clearInterval(interval);
+        if (!shellBox || (shellBox as THREE.Box3).isEmpty()) {
+            return false;
+        }
+
+        const size = (shellBox as THREE.Box3).getSize(new THREE.Vector3());
+        const center = (shellBox as THREE.Box3).getCenter(new THREE.Vector3());
+
+        const maxDim = Math.max(size.x, size.y, size.z);
+        if (maxDim <= 0) {
+            return false;
+        }
+
+        const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
+        let distance = Math.abs(maxDim / Math.tan(fov / 2));
+        distance *= 2.0; // Padding
+
+        targetRef.current.copy(center);
+        distanceRef.current = distance;
+
+        if (!initialFitDone.current) {
+            // Initial camera position
+            camera.position.set(
+                center.x + distance * 0.6,
+                center.y + distance * 0.5,
+                center.z + distance * 0.6
+            );
+            camera.lookAt(center);
+
+            if (controlsRef.current) {
+                controlsRef.current.target.copy(center);
+                controlsRef.current.update();
+            }
+            initialFitDone.current = true;
+        }
+
+        return true;
     }, [camera, scene, controlsRef]);
+
+    // Re-fit only when the shell geometry actually changes, instead of polling on a timer.
+    useEffect(() => {
+        needsFitRef.current = true; // fit on mount
+        const unsubscribe = useShellStore.subscribe((state, prev) => {
+            if (
+                state.mode !== prev.mode ||
+                state.d1 !== prev.d1 ||
+                state.d2 !== prev.d2 ||
+                state.h !== prev.h ||
+                state.thickness !== prev.thickness ||
+                state.gap !== prev.gap ||
+                state.kFactor !== prev.kFactor ||
+                state.results !== prev.results
+            ) {
+                needsFitRef.current = true;
+            }
+        });
+        return unsubscribe;
+    }, []);
 
     // Handle view position changes from ViewCube
     useEffect(() => {
@@ -94,9 +117,18 @@ const CameraController: React.FC<{
         }
     }, [viewPosition, camera, controlsRef]);
 
-    // Update camera quaternion for ViewCube sync
+    // Apply a pending fit and keep the ViewCube in sync — but only push state
+    // to React when the camera orientation actually changed, to avoid a 60fps
+    // re-render of the whole scene while the camera is idle.
     useFrame(() => {
-        onCameraUpdate(camera.quaternion.clone());
+        if (needsFitRef.current && fitCamera()) {
+            needsFitRef.current = false;
+        }
+
+        if (lastQuatRef.current.angleTo(camera.quaternion) > 0.001) {
+            lastQuatRef.current.copy(camera.quaternion);
+            onCameraUpdate(camera.quaternion.clone());
+        }
     });
 
     return null;

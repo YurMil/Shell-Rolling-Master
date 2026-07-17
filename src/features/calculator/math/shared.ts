@@ -15,7 +15,7 @@ export const buildInvalidResult = (message: string): CalculationResult => ({
 });
 
 export const validateBaseParams = (params: ShellParameters): string | null => {
-    const { mode, d1, d2, h, thickness, kFactor } = params;
+    const { mode, d1, d2, h, thickness, kFactor, gap } = params;
 
     if (!isValidDimension(d1) || !isValidDimension(h) || !isValidDimension(thickness) || !isValidDimension(kFactor)) {
         return 'Invalid input dimensions. All values must be positive numbers.';
@@ -23,6 +23,15 @@ export const validateBaseParams = (params: ShellParameters): string | null => {
 
     if (mode === 'cone' && !isValidDimension(d2)) {
         return 'Invalid input dimensions. D2 must be positive for cone mode.';
+    }
+
+    // Gap is allowed to be 0 (no weld gap), but must be a finite, non-negative number.
+    if (typeof gap !== 'number' || !isFinite(gap) || gap < 0) {
+        return 'Invalid welding gap. It must be a non-negative number.';
+    }
+
+    if (kFactor > 1) {
+        return 'Invalid K-Factor. It must be between 0 and 1.';
     }
 
     return null;

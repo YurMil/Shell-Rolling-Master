@@ -169,14 +169,18 @@ export const calculateCone = (params: ShellParameters, base: CalculationResult):
     }
 
     const initialAngle = (360 * R_large) / patternRadiusOuter;
-    const currentArc = (initialAngle / 360) * 2 * Math.PI * patternRadiusOuter;
-    const newArc = currentArc - gap;
 
-    if (newArc <= 0) {
+    // Subtract the welding gap as an arc length measured along the NEUTRAL fibre of the
+    // development, consistent with the cylinder (which subtracts the gap from the neutral
+    // circumference). Using the outer/swing radius here would leave a smaller-than-specified
+    // gap at the neutral fibre and make the two modes disagree for near-cylindrical cones.
+    const neutralPatternRadius = (patternRadiusOuter + patternRadiusInner) / 2;
+    const gapAngleDeg = (gap / neutralPatternRadius) * (180 / Math.PI);
+    const finalAngle = initialAngle - gapAngleDeg;
+
+    if (finalAngle <= 0) {
         return { ...base, isValid: false, error: 'Gap is too large for this geometry.' };
     }
-
-    const finalAngle = (newArc / (2 * Math.PI * patternRadiusOuter)) * 360;
 
     if (finalAngle > 360) {
         console.warn(`Development angle (${finalAngle.toFixed(2)}°) exceeds 360°. Pattern will overlap.`);
@@ -209,8 +213,7 @@ export const calculateCone = (params: ShellParameters, base: CalculationResult):
     const bendLines = params.bendLinesEnabled
         ? buildConeBendLines(patternRadiusOuter, patternRadiusInner, finalAngle, patternRotationDeg, params.bendLinesCount)
         : [];
-    const neutralRadius = (patternRadiusOuter + patternRadiusInner) / 2;
-    const neutralArcLength = (finalAngle / 360) * 2 * Math.PI * neutralRadius;
+    const neutralArcLength = (finalAngle / 360) * 2 * Math.PI * neutralPatternRadius;
     const bendStep = params.bendLinesEnabled && params.bendLinesCount > 0
         ? neutralArcLength / (params.bendLinesCount + 1)
         : undefined;
