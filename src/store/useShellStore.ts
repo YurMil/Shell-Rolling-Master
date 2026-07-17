@@ -76,7 +76,9 @@ export const useShellStore = create<ShellState>((set, get) => ({
         get().recalc();
     },
     setGap: (gap) => {
-        set({ gap });
+        // Sanitize: ensure non-negative and finite, fallback to 0 if invalid
+        const sanitized = isNaN(gap) || !isFinite(gap) || gap < 0 ? 0 : gap;
+        set({ gap: sanitized });
         get().recalc();
     },
     setBendLinesEnabled: (bendLinesEnabled) => {

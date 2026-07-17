@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useShellStore } from '../../store/useShellStore';
-import { NumberInput, Button } from '../../components/ui';
+import { NumberField, Button } from '../../components/ui';
 import { cn } from '../../components/ui/cn';
 import { ResultsCard } from './ResultsCard';
 import { FileText, Download } from 'lucide-react';
@@ -56,21 +56,21 @@ export const InputPanel: React.FC = () => {
                     </div>
                 </div>
 
-                <NumberInput label="Diameter 1 (Top)" value={state.d1} onChange={(e) => state.setD1(parseFloat(e.target.value))} />
+                <NumberField label="Diameter 1 (Top)" value={state.d1} min={0} onCommit={state.setD1} />
 
                 {state.mode === 'cone' && (
-                    <NumberInput label="Diameter 2 (Bottom)" value={state.d2} onChange={(e) => state.setD2(parseFloat(e.target.value))} />
+                    <NumberField label="Diameter 2 (Bottom)" value={state.d2} min={0} onCommit={state.setD2} />
                 )}
 
-                <NumberInput label="Height / Width" value={state.h} onChange={(e) => state.setHeight(parseFloat(e.target.value))} />
+                <NumberField label="Height / Width" value={state.h} min={0} onCommit={state.setHeight} />
 
                 <div className="grid grid-cols-2 gap-4">
-                    <NumberInput label="Thickness" value={state.thickness} onChange={(e) => state.setThickness(parseFloat(e.target.value))} />
-                    <NumberInput label="K-Factor" value={state.kFactor} step={0.01} onChange={(e) => state.setKFactor(parseFloat(e.target.value))} />
+                    <NumberField label="Thickness" value={state.thickness} min={0} step={0.1} onCommit={state.setThickness} />
+                    <NumberField label="K-Factor" value={state.kFactor} min={0} max={1} step={0.01} onCommit={state.setKFactor} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <NumberInput label="Gap" value={state.gap} step={0.1} onChange={(e) => state.setGap(parseFloat(e.target.value))} />
+                    <NumberField label="Gap" value={state.gap} min={0} step={0.1} onCommit={state.setGap} />
                     <div className="flex items-center gap-2 text-sm text-gray-200">
                         <input
                             type="checkbox"
@@ -84,12 +84,12 @@ export const InputPanel: React.FC = () => {
 
                 {state.bendLinesEnabled && (
                     <div className="grid grid-cols-2 gap-4">
-                        <NumberInput
+                        <NumberField
                             label="Quantity"
                             value={state.bendLinesCount}
                             min={0}
                             step={1}
-                            onChange={(e) => state.setBendLinesCount(parseFloat(e.target.value))}
+                            onCommit={state.setBendLinesCount}
                         />
                         <div className="flex items-end text-sm text-gray-300 pb-1">
                             Step: {state.results.bendStep ? state.results.bendStep.toFixed(1) : '—'} mm
