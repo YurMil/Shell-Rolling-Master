@@ -36,7 +36,7 @@ jobs:
           API_TOKEN_GITHUB: ${{ secrets.DEPLOY_TOKEN }}
         with:
           source-directory: 'dist'                    
-          destination-github-username: 'Biosxxx'
+          destination-github-username: 'YurMil'
           destination-repository-name: 'cadautoscript.com'
           target-directory: 'static/utility-apps/cylindrical-shell-rolling' # Куда положить код         
           user-email: 'bot@pvt-game.com'
