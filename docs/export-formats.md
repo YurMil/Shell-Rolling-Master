@@ -104,17 +104,31 @@ Used when the calculator is **iframe-embedded** in a same-origin host (CAD Auto 
 
 ### Rules
 
-- **Schema version:** `1`
+- **Schema version:** `1` — the host stamps `v` into the link and sends it back,
+  so the constant must not be bumped for new fields; versions `1` and `2` are
+  both accepted on restore
 - **Debounce:** 300 ms on state updates
-- **Payload:** input parameters only (`SharedParams`); results always recomputed after restore
-- Invalid or unknown fields are ignored; per-field defaults remain via store setters
+- **Payload:** input parameters only (`SharedParams` = `ShellParameters`);
+  results always recomputed after restore
+- Invalid, unknown and missing fields are ignored per field; a link created
+  before a parameter existed simply keeps that parameter's default
 - Same-origin `postMessage` only
 
 ### Shared parameter fields
 
-`mode`, `specType`, `d1`, `d2`, `h`, `thickness`, `kFactor`, `gap`, `bendLinesEnabled`, `bendLinesCount`
+All of `ShellParameters`: `mode`, `specType`, `d1`, `d2`, `h`, `thickness`,
+`kFactor`, `gap`, `bendLinesEnabled`, `bendLinesCount`, `eccentricity`,
+`seamPosition`, `seamAngleDeg`, `stationCount`, `density`,
+`bendDimensionsEnabled`, `bendDimensionOffset`.
 
-Implementation: `src/shareLink.ts`.
+The field list is not maintained by hand. Parsing and serialisation are driven
+by `PARAM_APPLIERS: Record<keyof ShellParameters, ParamApplier>`, so a new input
+parameter fails to compile until it is wired into the protocol, and the
+enumerated values are validated against the `SHAPE_TYPES` / `SPEC_TYPES` /
+`SEAM_POSITIONS` tuples the unions are derived from rather than a repeated
+allow-list.
+
+Implementation: `src/shareLink.ts`. Round-trip checks: `npm run verify:share-link`.
 
 ---
 

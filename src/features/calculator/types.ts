@@ -1,7 +1,15 @@
 
-export type ShapeType = 'cylinder' | 'cone' | 'eccentric-cone';
-export type SpecType = 'OD' | 'ID';
-export type SeamPosition = 'short' | 'long' | 'custom';
+// The runtime tuples are the single source of truth for these unions: anything
+// that has to validate a value coming from outside the app (share links, query
+// parameters) iterates them instead of repeating the literals, so adding a mode
+// cannot silently leave a stale allow-list behind.
+export const SHAPE_TYPES = ['cylinder', 'cone', 'eccentric-cone'] as const;
+export const SPEC_TYPES = ['OD', 'ID'] as const;
+export const SEAM_POSITIONS = ['short', 'long', 'custom'] as const;
+
+export type ShapeType = typeof SHAPE_TYPES[number];
+export type SpecType = typeof SPEC_TYPES[number];
+export type SeamPosition = typeof SEAM_POSITIONS[number];
 
 export interface Point2D {
     x: number;

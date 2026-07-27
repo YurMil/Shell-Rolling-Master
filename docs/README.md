@@ -12,6 +12,7 @@ Technical documentation for **Shell Rolling Master** — a browser-based calcula
 | [Architecture](./architecture.md) | Developers | Module map, data flow, CAD worker pipeline |
 | [Export formats](./export-formats.md) | Developers / CAD users | PDF, DXF, STEP, embed share protocol |
 | [Development](./development.md) | Contributors | Environment, scripts, build, CI/CD |
+| [Eccentric cone](./eccentric-cone.md) | Engineers / developers | Specification of the oblique-cone mode: isometric development, layout, exports (RU) |
 
 ## Product summary
 
