@@ -1,7 +1,8 @@
 
 import type { ShellParameters, CalculationResult } from '../features/calculator/types';
-import { buildDevelopmentDimensions, type AlignedDimension } from './aligned-dimension';
+import type { AlignedDimension } from './aligned-dimension';
 import { getConePatternAngles, getConePatternPoints } from './cone-pattern';
+import { buildPatternDimensions } from './pattern-dimensions';
 
 export class DxfWriter {
     private content: string[] = [];
@@ -157,6 +158,27 @@ export class DxfWriter {
 }
 
 /**
+ * Text height for annotations, scaled to the blank so a 7 m development and a
+ * 300 mm one both come out readable at 1:1.
+ */
+const annotationTextHeight = (result: CalculationResult): number =>
+    Math.max(4, Math.min(result.flatLength, result.flatWidth) * 0.012);
+
+/**
+ * Spacing dimensions between the bend lines, available in every mode.
+ *
+ * The run goes seam edge -> bend lines -> seam edge along the pattern edges,
+ * plus the length of both seam edges.
+ */
+const addBendLineDimensions = (dxf: DxfWriter, state: ShellParameters, result: CalculationResult) => {
+    const textHeight = annotationTextHeight(result) * 1.6;
+
+    for (const dimension of buildPatternDimensions(state, result, textHeight)) {
+        dxf.addAlignedDimension(dimension, textHeight);
+    }
+};
+
+/**
  * Eccentric cone development: one closed contour (bottom edge, seam, top edge,
  * seam) plus optional ruling lines and station numbers, 1:1 in millimetres.
  */
@@ -176,7 +198,7 @@ export const generateEccentricConeDxf = (state: ShellParameters, result: Calcula
     }
 
     // Station numbers, placed just outside the bottom edge.
-    const textHeight = Math.max(4, Math.min(result.flatLength, result.flatWidth) * 0.012);
+    const textHeight = annotationTextHeight(result);
     for (const station of development.stations) {
         const dx = station.bottom.x - station.top.x;
         const dy = station.bottom.y - station.top.y;
@@ -192,19 +214,7 @@ export const generateEccentricConeDxf = (state: ShellParameters, result: Calcula
         );
     }
 
-    // Chord dimensions between the bend-line endpoints, on both edges.
-    if (state.bendLinesEnabled && state.bendDimensionsEnabled) {
-        const dimensions = buildDevelopmentDimensions(
-            development.stations.map(station => station.bottom),
-            development.stations.map(station => station.top),
-            state.bendDimensionOffset,
-            textHeight * 1.6
-        );
-
-        for (const dimension of dimensions) {
-            dxf.addAlignedDimension(dimension, textHeight * 1.6);
-        }
-    }
+    addBendLineDimensions(dxf, state, result);
 
     // Reference blank outline.
     if (result.bboxMinX !== undefined && result.bboxMinY !== undefined) {
@@ -242,5 +252,8 @@ export const generateUnfoldedDxf = (state: ShellParameters, result: CalculationR
             dxf.addBendLine(line.x1, line.y1, line.x2, line.y2);
         }
     }
+
+    addBendLineDimensions(dxf, state, result);
+
     return dxf.toDxfString();
 };

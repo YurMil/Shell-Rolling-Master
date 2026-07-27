@@ -1,10 +1,14 @@
 import React, { useMemo } from 'react';
 import type { CalculationResult } from '../calculator/types';
+import { useShellStore } from '../../store/useShellStore';
 import { buildConeSvgPathData } from '../../utils/cone-pattern';
+import { buildPatternDimensions } from '../../utils/pattern-dimensions';
+import { DimensionOverlay } from './DimensionOverlay';
 import { PatternLayout, type PatternViewModel } from './PatternLayout';
 
 export const ConePatternView: React.FC<{ results: CalculationResult }> = ({ results }) => {
     const { rOut, rIn, angle, flatLength, flatWidth, bboxWidth, bboxHeight, bboxMinX, bboxMinY, patternRotationDeg, bendLines } = results;
+    const params = useShellStore();
 
     const viewModel = useMemo<PatternViewModel | null>(() => {
         if (!rOut || !rIn || !angle || angle <= 0) return null;
@@ -18,8 +22,12 @@ export const ConePatternView: React.FC<{ results: CalculationResult }> = ({ resu
         const minX = bboxMinX ?? -width / 2;
         const minY = bboxMinY ?? -height / 2;
 
-        const padding = Math.max(width, height) * 0.15;
         const fontSize = Math.max(12, Math.max(width, height) * 0.025);
+        const dimFontSize = fontSize * 0.65;
+        const dimensions = buildPatternDimensions(params, results, dimFontSize);
+
+        // Dimensions sit outside the blank, so the viewport has to make room for them.
+        const padding = Math.max(width, height) * 0.15 + (dimensions.length > 0 ? params.bendDimensionOffset * 2 : 0);
 
         const viewBoxWidth = width + padding * 2;
         const viewBoxHeight = height + padding * 2;
@@ -61,6 +69,8 @@ export const ConePatternView: React.FC<{ results: CalculationResult }> = ({ resu
                         />
                     ))}
 
+                    <DimensionOverlay dimensions={dimensions} fontSize={dimFontSize} />
+
                     <line x1={minX} y1={minY + height + fontSize * 2} x2={minX + width} y2={minY + height + fontSize * 2} stroke="#ff6b6b" strokeWidth={fontSize * 0.08} />
                     <line x1={minX} y1={minY + height + fontSize * 1.5} x2={minX} y2={minY + height + fontSize * 2.5} stroke="#ff6b6b" strokeWidth={fontSize * 0.08} />
                     <line x1={minX + width} y1={minY + height + fontSize * 1.5} x2={minX + width} y2={minY + height + fontSize * 2.5} stroke="#ff6b6b" strokeWidth={fontSize * 0.08} />
@@ -77,7 +87,7 @@ export const ConePatternView: React.FC<{ results: CalculationResult }> = ({ resu
                 </>
             )
         };
-    }, [rOut, rIn, angle, flatLength, flatWidth, bboxWidth, bboxHeight, bboxMinX, bboxMinY, patternRotationDeg, bendLines]);
+    }, [params, results, rOut, rIn, angle, flatLength, flatWidth, bboxWidth, bboxHeight, bboxMinX, bboxMinY, patternRotationDeg, bendLines]);
 
     if (!viewModel) {
         return <div className="w-full h-full flex items-center justify-center text-gray-400">Invalid or No Geometry</div>;

@@ -1,9 +1,13 @@
 import React, { useMemo } from 'react';
 import type { CalculationResult } from '../calculator/types';
+import { useShellStore } from '../../store/useShellStore';
+import { buildPatternDimensions } from '../../utils/pattern-dimensions';
+import { DimensionOverlay } from './DimensionOverlay';
 import { PatternLayout, type PatternViewModel } from './PatternLayout';
 
 export const CylinderPatternView: React.FC<{ results: CalculationResult }> = ({ results }) => {
     const { flatLength, flatWidth, bendLines } = results;
+    const params = useShellStore();
 
     const viewModel = useMemo<PatternViewModel | null>(() => {
         const w = flatLength;
@@ -13,8 +17,11 @@ export const CylinderPatternView: React.FC<{ results: CalculationResult }> = ({ 
             return null;
         }
 
-        const padding = Math.max(w, h) * 0.15;
         const fontSize = Math.max(12, Math.max(w, h) * 0.025);
+        const dimFontSize = fontSize * 0.65;
+        const dimensions = buildPatternDimensions(params, results, dimFontSize);
+        // Dimensions sit outside the blank, so the viewport has to make room for them.
+        const padding = Math.max(w, h) * 0.15 + (dimensions.length > 0 ? params.bendDimensionOffset * 2 : 0);
 
         const viewBoxX = -w / 2 - padding;
         const viewBoxY = -h / 2 - padding;
@@ -43,6 +50,8 @@ export const CylinderPatternView: React.FC<{ results: CalculationResult }> = ({ 
                         />
                     ))}
 
+                    <DimensionOverlay dimensions={dimensions} fontSize={dimFontSize} />
+
                     <line x1={-w / 2} y1={h / 2 + fontSize * 1.5} x2={w / 2} y2={h / 2 + fontSize * 1.5} stroke="#938f99" strokeWidth={fontSize * 0.05} />
                     <line x1={-w / 2} y1={h / 2 + fontSize} x2={-w / 2} y2={h / 2 + fontSize * 2} stroke="#938f99" strokeWidth={fontSize * 0.05} />
                     <line x1={w / 2} y1={h / 2 + fontSize} x2={w / 2} y2={h / 2 + fontSize * 2} stroke="#938f99" strokeWidth={fontSize * 0.05} />
@@ -59,7 +68,7 @@ export const CylinderPatternView: React.FC<{ results: CalculationResult }> = ({ 
                 </>
             )
         };
-    }, [flatLength, flatWidth, bendLines]);
+    }, [params, results, flatLength, flatWidth, bendLines]);
 
     if (!viewModel) {
         return <div className="w-full h-full flex items-center justify-center text-gray-400">Invalid or No Geometry</div>;

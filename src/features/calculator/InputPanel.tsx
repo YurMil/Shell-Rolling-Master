@@ -181,27 +181,35 @@ export const InputPanel: React.FC = () => {
                             {state.results.bendStep ? `${state.results.bendStep.toFixed(1)} mm` : '—'}
                         </div>
 
-                        {state.bendLinesEnabled && (
-                            <>
-                                <label className="flex items-center gap-2 text-sm text-gray-200 mb-4">
-                                    <input
-                                        type="checkbox"
-                                        checked={state.bendDimensionsEnabled}
-                                        onChange={(e) => state.setBendDimensionsEnabled(e.target.checked)}
-                                        className="accent-md-primary"
-                                    />
-                                    <span>Dimension bend-line spacing</span>
-                                </label>
+                    </>
+                )}
 
-                                {state.bendDimensionsEnabled && (
-                                    <NumberField
-                                        label="Dimension offset (mm)"
-                                        value={state.bendDimensionOffset}
-                                        min={1}
-                                        step={10}
-                                        onCommit={state.setBendDimensionOffset}
-                                    />
-                                )}
+                {state.bendLinesEnabled && (
+                    <>
+                        <label className="flex items-center gap-2 text-sm text-gray-200 mb-4">
+                            <input
+                                type="checkbox"
+                                checked={state.bendDimensionsEnabled}
+                                onChange={(e) => state.setBendDimensionsEnabled(e.target.checked)}
+                                className="accent-md-primary"
+                            />
+                            <span>Dimension bend-line spacing</span>
+                        </label>
+
+                        {state.bendDimensionsEnabled && (
+                            <>
+                                <NumberField
+                                    label="Dimension offset (mm)"
+                                    value={state.bendDimensionOffset}
+                                    min={1}
+                                    step={10}
+                                    onCommit={state.setBendDimensionOffset}
+                                />
+                                <div className="-mt-4 mb-4 text-xs text-gray-500">
+                                    {state.mode === 'cylinder'
+                                        ? 'Spacing along the blank plus the two seam edges, on the DXF BEND_DIMS layer.'
+                                        : 'Spacing along both edges plus the two seam edges, on the DXF BEND_DIMS layer.'}
+                                </div>
                             </>
                         )}
                     </>

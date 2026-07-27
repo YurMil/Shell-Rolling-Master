@@ -33,7 +33,12 @@ On narrow screens the sidebar stacks above the viewport.
    - **Thickness** — plate thickness
    - **K-factor** — neutral fibre position in the thickness (typical steel ~0.3–0.5)
    - **Gap** — open seam / weld gap along the developed length
-4. Optionally enable **bend lines** and set the count of guide lines.
+4. Optionally enable **bend lines** and set the count of guide lines. With bend
+   lines on, **Dimension bend-line spacing** adds an aligned dimension run
+   between the guides — on one edge for a cylinder blank (both edges are
+   parallel, so the numbers would repeat) and on both edges for a cone, where
+   the two arcs have different chord lengths. **Dimension offset** controls how
+   far the dimension lines sit outside the blank.
 5. Review the results card (required sheet size; for cones also sector angle and radii).
 6. Switch view modes as needed; export PDF / DXF / STEP when ready.
 
@@ -52,6 +57,8 @@ Every input change recalculates immediately. Invalid combinations show an error 
 | K-factor | — | &gt; 0 and ≤ 1 | Neutral-axis fraction through thickness |
 | Gap | mm | Finite, ≥ 0 | Deducted from developed blank length / sector |
 | Bend lines | — | Optional; count ≥ 1 when enabled | Equally spaced roll guides |
+| Dimension bend-line spacing | — | Requires bend lines | Spacing between guides plus both seam edges |
+| Dimension offset | mm | > 0 | Distance from the edge to the dimension line |
 
 ### Defaults
 
@@ -89,14 +96,14 @@ Cone **reported** sheet dimensions include a **10 mm** cutting margin on the bou
 
 - **Cylinder:** dimensioned rectangle
 - **Cone:** dimensioned annular sector with dashed bounding rectangle
-- Bend lines drawn when enabled
+- Bend lines drawn when enabled, with their spacing dimensions when that option is on
 
 ## Exports
 
 | Format | Typical use |
 |--------|-------------|
 | **PDF** | Shop fabrication report (inputs, neutrals, cutting data, pattern sketch) |
-| **DXF** | CNC / CAD blank outline (+ optional bend layer) |
+| **DXF** | CNC / CAD blank outline (+ optional bend and dimension layers) |
 | **STEP** | Thick open-seam solid for CAD (browser OpenCascade WASM) |
 
 Filenames:

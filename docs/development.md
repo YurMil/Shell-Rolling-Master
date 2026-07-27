@@ -28,6 +28,7 @@ Dev server: `http://localhost:3000` (bound to `0.0.0.0`).
 | `npm run lint` | ESLint (TypeScript + React Hooks + Refresh) |
 | `npm run verify` | Numerical and protocol checks (both suites below) |
 | `npm run verify:eccentric` | Eccentric cone development vs. independently known values |
+| `npm run verify:bend-dimensions` | Bend-line spacing dimensions in all three shape modes |
 | `npm run verify:share-link` | Share-link round trip, real link payload, hostile input |
 
 There is currently **no** automated unit/e2e test script in `package.json`.
