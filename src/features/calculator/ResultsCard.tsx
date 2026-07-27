@@ -2,9 +2,22 @@
 import React from 'react';
 import { useShellStore } from '../../store/useShellStore';
 
+const Row: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+    <div className="flex justify-between items-center border-b border-[#36343b] pb-2">
+        <span className="text-sm text-gray-400">{label}</span>
+        <span className="font-mono text-white text-right">{value}</span>
+    </div>
+);
+
+const MODE_LABELS: Record<string, string> = {
+    'cylinder': 'Cylinder',
+    'cone': 'Cone',
+    'eccentric-cone': 'Eccentric cone'
+};
+
 export const ResultsCard: React.FC = () => {
-    const { results, mode, thickness } = useShellStore();
-    const { isValid, flatLength, flatWidth, angle, rOut, rIn, error } = results;
+    const { results, mode, thickness, density } = useShellStore();
+    const { isValid, flatLength, flatWidth, angle, rOut, rIn, error, eccentric } = results;
 
     if (!isValid) {
         return (
@@ -28,7 +41,7 @@ export const ResultsCard: React.FC = () => {
 
                 <div className="flex justify-between items-center border-b border-[#36343b] pb-2">
                     <span className="text-sm text-gray-400">Type:</span>
-                    <span className="font-mono text-md-primary capitalize text-right">{mode}</span>
+                    <span className="font-mono text-md-primary text-right">{MODE_LABELS[mode] ?? mode}</span>
                 </div>
 
                 {mode === 'cone' && (
@@ -53,6 +66,28 @@ export const ResultsCard: React.FC = () => {
                         <div className="text-xs text-gray-500">
                             Outer R is the development (swing) radius, not the part height.
                         </div>
+                    </>
+                )}
+
+                {mode === 'eccentric-cone' && eccentric && (
+                    <>
+                        <div className="pt-2 text-xs text-gray-400 uppercase tracking-wider">Development</div>
+                        <Row label="Ruling min:" value={`${eccentric.minRuling.length.toFixed(1)} mm @ ${eccentric.minRuling.phiDeg.toFixed(0)}°`} />
+                        <Row label="Ruling max:" value={`${eccentric.maxRuling.length.toFixed(1)} mm @ ${eccentric.maxRuling.phiDeg.toFixed(0)}°`} />
+                        <Row label="Bottom edge:" value={`${eccentric.totalBottomArc.toFixed(1)} mm`} />
+                        <Row label="Top edge:" value={`${eccentric.totalTopArc.toFixed(1)} mm`} />
+                        <Row label="Inclination:" value={`${eccentric.halfAngleMinDeg.toFixed(1)}° … ${eccentric.halfAngleMaxDeg.toFixed(1)}°`} />
+                        <Row label="Surface area:" value={`${(eccentric.surfaceArea / 1e6).toFixed(3)} m²`} />
+                        <Row
+                            label="Blank mass:"
+                            value={`${((eccentric.surfaceArea * thickness * density) / 1e9).toFixed(1)} kg`}
+                        />
+                        <div className="text-xs text-gray-500">
+                            Edge lengths are exact developed arcs (2πR), not chord sums.
+                        </div>
+                        {eccentric.warnings.map((warning, index) => (
+                            <div key={index} className="text-xs text-amber-300">{warning}</div>
+                        ))}
                     </>
                 )}
             </div>

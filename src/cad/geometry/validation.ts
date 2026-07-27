@@ -26,6 +26,18 @@ export const assertValidShellCadGeometry = (geometry: ShellCadGeometry) => {
         throw new Error('Gap angle is outside the valid range for STEP export.');
     }
 
+    if (geometry.kind === 'eccentric') {
+        if (!Number.isFinite(geometry.eccentricity) || geometry.eccentricity < 0) {
+            throw new Error('Eccentricity must be a non-negative number for STEP export.');
+        }
+
+        if (!Number.isFinite(geometry.seamPhi)) {
+            throw new Error('Seam angle is not a finite number.');
+        }
+
+        return;
+    }
+
     if (!Number.isFinite(geometry.thetaLength) || geometry.thetaLength <= 0) {
         throw new Error('Shell angular span must be larger than zero.');
     }

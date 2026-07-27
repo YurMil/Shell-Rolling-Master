@@ -21,8 +21,12 @@ export const validateBaseParams = (params: ShellParameters): string | null => {
         return 'Invalid input dimensions. All values must be positive numbers.';
     }
 
-    if (mode === 'cone' && !isValidDimension(d2)) {
+    if (mode !== 'cylinder' && !isValidDimension(d2)) {
         return 'Invalid input dimensions. D2 must be positive for cone mode.';
+    }
+
+    if (mode === 'eccentric-cone' && (typeof params.eccentricity !== 'number' || !isFinite(params.eccentricity))) {
+        return 'Invalid eccentricity. It must be a finite number.';
     }
 
     // Gap is allowed to be 0 (no weld gap), but must be a finite, non-negative number.
@@ -46,11 +50,11 @@ export const calculateNeutralDiameters = (params: ShellParameters): { d1_n: numb
 
     if (specType === 'ID') {
         d1_n = d1 + offset;
-        d2_n = mode === 'cone' ? d2 + offset : d1_n;
+        d2_n = mode === 'cylinder' ? d1_n : d2 + offset;
     } else {
         const sub = 2 * thickness * (1 - kFactor);
         d1_n = d1 - sub;
-        d2_n = mode === 'cone' ? d2 - sub : d1_n;
+        d2_n = mode === 'cylinder' ? d1_n : d2 - sub;
     }
 
     return { d1_n, d2_n };
@@ -61,7 +65,7 @@ export const validateNeutralThickness = (mode: ShellParameters['mode'], thicknes
         return 'Thickness is too large. It must be smaller than the neutral radius to be physically possible.';
     }
 
-    if (mode === 'cone' && thickness >= r2_n) {
+    if (mode !== 'cylinder' && thickness >= r2_n) {
         return 'Thickness is too large. It must be smaller than the neutral radius to be physically possible.';
     }
 

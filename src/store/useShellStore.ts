@@ -1,7 +1,8 @@
 
 import { create } from 'zustand';
-import type { ShellParameters, CalculationResult, ShapeType, SpecType } from '../features/calculator/types';
+import type { ShellParameters, CalculationResult, ShapeType, SpecType, SeamPosition } from '../features/calculator/types';
 import { calculateShell } from '../features/calculator/math';
+import { MAX_STATIONS, MIN_STATIONS } from '../features/calculator/math/eccentric-cone';
 
 interface ShellState extends ShellParameters {
     results: CalculationResult;
@@ -18,7 +19,15 @@ interface ShellState extends ShellParameters {
     setGap: (val: number) => void;
     setBendLinesEnabled: (val: boolean) => void;
     setBendLinesCount: (val: number) => void;
+    setEccentricity: (val: number) => void;
+    setSeamPosition: (val: SeamPosition) => void;
+    setSeamAngle: (val: number) => void;
+    setStationCount: (val: number) => void;
+    setDensity: (val: number) => void;
+    setBendDimensionsEnabled: (val: boolean) => void;
+    setBendDimensionOffset: (val: number) => void;
     setViewMode: (mode: '3d' | '2d') => void;
+    recalc: () => void;
 }
 
 const initialParams: ShellParameters = {
@@ -31,7 +40,14 @@ const initialParams: ShellParameters = {
     kFactor: 0.44,
     gap: 2.0,
     bendLinesEnabled: false,
-    bendLinesCount: 0
+    bendLinesCount: 0,
+    eccentricity: 250,
+    seamPosition: 'short',
+    seamAngleDeg: 0,
+    stationCount: 24,
+    density: 7850,
+    bendDimensionsEnabled: false,
+    bendDimensionOffset: 120
 };
 
 export const useShellStore = create<ShellState>((set, get) => ({
@@ -91,6 +107,43 @@ export const useShellStore = create<ShellState>((set, get) => ({
         get().recalc();
     },
 
+    setEccentricity: (eccentricity) => {
+        // Negative eccentricity is the mirrored part, so it is normalised to |e|.
+        const sanitized = isNaN(eccentricity) || !isFinite(eccentricity) ? 0 : Math.abs(eccentricity);
+        set({ eccentricity: sanitized });
+        get().recalc();
+    },
+    setSeamPosition: (seamPosition) => {
+        set({ seamPosition });
+        get().recalc();
+    },
+    setSeamAngle: (seamAngleDeg) => {
+        const sanitized = isNaN(seamAngleDeg) || !isFinite(seamAngleDeg) ? 0 : ((seamAngleDeg % 360) + 360) % 360;
+        set({ seamAngleDeg: sanitized });
+        get().recalc();
+    },
+    setStationCount: (stationCount) => {
+        const sanitized = isNaN(stationCount) || !isFinite(stationCount)
+            ? MIN_STATIONS
+            : Math.min(MAX_STATIONS, Math.max(MIN_STATIONS, Math.round(stationCount)));
+        set({ stationCount: sanitized });
+        get().recalc();
+    },
+    setDensity: (density) => {
+        const sanitized = isNaN(density) || !isFinite(density) || density <= 0 ? 7850 : density;
+        set({ density: sanitized });
+        get().recalc();
+    },
+    setBendDimensionsEnabled: (bendDimensionsEnabled) => {
+        set({ bendDimensionsEnabled });
+    },
+    setBendDimensionOffset: (bendDimensionOffset) => {
+        const sanitized = isNaN(bendDimensionOffset) || !isFinite(bendDimensionOffset) || bendDimensionOffset <= 0
+            ? 1
+            : bendDimensionOffset;
+        set({ bendDimensionOffset: sanitized });
+    },
+
     setViewMode: (viewMode) => {
         set({ viewMode });
     },
@@ -107,7 +160,14 @@ export const useShellStore = create<ShellState>((set, get) => ({
             kFactor: state.kFactor,
             gap: state.gap,
             bendLinesEnabled: state.bendLinesEnabled,
-            bendLinesCount: state.bendLinesCount
+            bendLinesCount: state.bendLinesCount,
+            eccentricity: state.eccentricity,
+            seamPosition: state.seamPosition,
+            seamAngleDeg: state.seamAngleDeg,
+            stationCount: state.stationCount,
+            density: state.density,
+            bendDimensionsEnabled: state.bendDimensionsEnabled,
+            bendDimensionOffset: state.bendDimensionOffset
         };
         set({ results: calculateShell(params) });
     }
