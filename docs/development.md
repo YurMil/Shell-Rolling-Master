@@ -26,6 +26,9 @@ Dev server: `http://localhost:3000` (bound to `0.0.0.0`).
 | `npm run build` | Production build to `dist/` |
 | `npm run preview` | Preview production build |
 | `npm run lint` | ESLint (TypeScript + React Hooks + Refresh) |
+| `npm run verify` | Numerical and protocol checks (both suites below) |
+| `npm run verify:eccentric` | Eccentric cone development vs. independently known values |
+| `npm run verify:share-link` | Share-link round trip, real link payload, hostile input |
 
 There is currently **no** automated unit/e2e test script in `package.json`.
 
@@ -89,7 +92,7 @@ Before merging calculation or export changes:
 - [ ] DXF opens in a CAD tool with expected mm scale
 - [ ] STEP opens in a CAD tool as an open-seam thick shell
 - [ ] Embed share restore (if host available) recomputes matching results
-- [ ] `npm run lint` and `npm run build` succeed
+- [ ] `npm run lint`, `npm run verify` and `npm run build` succeed
 
 ## Deployment
 

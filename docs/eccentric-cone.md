@@ -237,8 +237,18 @@ ID-спецификация:  D_n = D + 2tK
 
 ```ts
 // features/calculator/types.ts
-export type ShapeType = 'cylinder' | 'cone' | 'eccentric-cone';
-export type SeamPosition = 'short' | 'long' | 'custom';
+
+// Перечисления объявляются рантайм-кортежами, а типы выводятся из них: всё,
+// что проверяет значение, пришедшее извне (ссылка на конфигурацию), обходит
+// кортеж, а не повторяет литералы — новый режим не может остаться забытым
+// в чужом списке допустимых значений (§ 4.1).
+export const SHAPE_TYPES = ['cylinder', 'cone', 'eccentric-cone'] as const;
+export const SPEC_TYPES = ['OD', 'ID'] as const;
+export const SEAM_POSITIONS = ['short', 'long', 'custom'] as const;
+
+export type ShapeType = typeof SHAPE_TYPES[number];
+export type SpecType = typeof SPEC_TYPES[number];
+export type SeamPosition = typeof SEAM_POSITIONS[number];
 
 interface ShellParameters {
     …существующие…
@@ -322,8 +332,33 @@ src/utils/
 ```
 
 Store (`useShellStore`) получает сеттеры `setEccentricity`, `setSeamPosition`,
-`setSeamAngle`, `setStationCount`, `setDensity`; `shareLink.ts` — новые поля
-в протоколе (schema version → 2, старые ссылки читаются как v1).
+`setSeamAngle`, `setStationCount`, `setDensity`, `setBendDimensionsEnabled`,
+`setBendDimensionOffset`.
+
+### 4.1. Ссылки на конфигурацию (`shareLink.ts`)
+
+Версия схемы **не меняется**: оболочка сайта сама проставляет `v` в ссылку и
+присылает его обратно, поэтому повышение константы сломало бы восстановление.
+Новые параметры добавляются как необязательные — ссылка, созданная до
+появления режима, просто оставляет для них значения по умолчанию. Модуль
+принимает `v ∈ {1, 2}` на будущее.
+
+Разбор и сборка полезной нагрузки переведены на таблицу
+`PARAM_APPLIERS: Record<keyof ShellParameters, ParamApplier>`:
+
+* добавление входного параметра **не компилируется**, пока он не заведён в
+  таблицу, — список полей больше нельзя забыть обновить;
+* допустимые значения перечислений берутся из `SHAPE_TYPES`, `SPEC_TYPES`,
+  `SEAM_POSITIONS` (§ 3), а не из рукописных `||`-цепочек.
+
+Именно вторая проблема и была причиной сбоя: ссылка на эксцентричный конус
+формировалась полностью, но при разборе `mode` проверялся списком
+`'cylinder' | 'cone'` и режим молча откатывался на цилиндр. Порядок применения
+— порядок ключей таблицы, `mode` первым: store пересчитывает результат на
+каждом сеттере, и остальные значения осмысленны только после выбора формы.
+
+Проверка: `npm run verify:share-link` (полный round-trip, реальная ссылка
+с сайта, все значения перечислений, устойчивость к битой нагрузке).
 
 ---
 
@@ -487,7 +522,7 @@ npm run verify:eccentric
 | 5. DXF | `utils/dxf-writer.ts` (`addPolyline`, `addText`, `addAlignedDimension`, `generateEccentricConeDxf`), `utils/aligned-dimension.ts` | готово |
 | 6. PDF-отчёт с таблицей станций | `utils/eccentric-cone-report.ts` | готово |
 | 7. STEP | `cad/types/cad-types.ts`, `cad/geometry/build-eccentric-cone-solid.ts`, `cad-worker.ts` | готово |
-| 8. Проверки § 7, share-link, сборка | `tools/verify-eccentric-cone.ts`, `shareLink.ts` | готово |
+| 8. Проверки § 7, share-link, сборка | `tools/verify-eccentric-cone.ts`, `tools/verify-share-link.ts`, `shareLink.ts` | готово |
 
 Реализованные отличия от первоначального плана:
 

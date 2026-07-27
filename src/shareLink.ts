@@ -1,5 +1,10 @@
 import { useShellStore } from './store/useShellStore';
-import type { SeamPosition, ShapeType, SpecType } from './features/calculator/types';
+import {
+  SEAM_POSITIONS,
+  SHAPE_TYPES,
+  SPEC_TYPES,
+  type ShellParameters,
+} from './features/calculator/types';
 
 /**
  * Share-link protocol (cadautoscript.com issue #113).
@@ -14,101 +19,105 @@ import type { SeamPosition, ShapeType, SpecType } from './features/calculator/ty
 const MESSAGE_SUPPORT = 'cas:share-support';
 const MESSAGE_RESTORE = 'cas:restore-state';
 const MESSAGE_UPDATE = 'cas:state-update';
-const SCHEMA_VERSION = 1;
+/**
+ * Versions of the payload this build can restore. The shell stamps the version
+ * into the link, so older links have to keep working: new parameters are always
+ * added as optional and fall back to the defaults when absent.
+ */
+const SUPPORTED_SCHEMA_VERSIONS = [1, 2];
 const UPDATE_DEBOUNCE_MS = 300;
 
-type SharedParams = {
-  mode: ShapeType;
-  specType: SpecType;
-  d1: number;
-  d2: number;
-  h: number;
-  thickness: number;
-  kFactor: number;
-  gap: number;
-  bendLinesEnabled: boolean;
-  bendLinesCount: number;
-  eccentricity: number;
-  seamPosition: SeamPosition;
-  seamAngleDeg: number;
-  stationCount: number;
-  density: number;
-  bendDimensionsEnabled: boolean;
-  bendDimensionOffset: number;
+/** Every input parameter is shared — the payload is exactly ShellParameters. */
+export type SharedParams = ShellParameters;
+
+type ShellStore = ReturnType<typeof useShellStore.getState>;
+type ParamApplier = (value: unknown, store: ShellStore) => void;
+
+const numeric = (apply: (store: ShellStore, value: number) => void): ParamApplier =>
+  (value, store) => {
+    if (typeof value === 'number' && Number.isFinite(value)) apply(store, value);
+  };
+
+const flag = (apply: (store: ShellStore, value: boolean) => void): ParamApplier =>
+  (value, store) => {
+    if (typeof value === 'boolean') apply(store, value);
+  };
+
+const oneOf = <T extends string>(
+  allowed: readonly T[],
+  apply: (store: ShellStore, value: T) => void,
+): ParamApplier =>
+  (value, store) => {
+    if (typeof value === 'string' && (allowed as readonly string[]).includes(value)) {
+      apply(store, value as T);
+    }
+  };
+
+/**
+ * How each shared parameter is validated and written back.
+ *
+ * Keying this by `keyof ShellParameters` is what keeps the protocol honest: a
+ * new input parameter fails to compile until it is wired in here, and the
+ * allowed values come from the same tuples the unions are built from. Both are
+ * deliberate — the eccentric cone mode was initially unreachable from a shared
+ * link because a hand-written allow-list still only listed cylinder and cone.
+ *
+ * Insertion order is the apply order, and `mode` has to come first: the store
+ * recalculates on every setter, and the remaining values are only meaningful
+ * once the shape is known.
+ */
+const PARAM_APPLIERS: Record<keyof ShellParameters, ParamApplier> = {
+  mode: oneOf(SHAPE_TYPES, (store, value) => store.setMode(value)),
+  specType: oneOf(SPEC_TYPES, (store, value) => store.setSpecType(value)),
+  d1: numeric((store, value) => store.setD1(value)),
+  d2: numeric((store, value) => store.setD2(value)),
+  h: numeric((store, value) => store.setHeight(value)),
+  thickness: numeric((store, value) => store.setThickness(value)),
+  kFactor: numeric((store, value) => store.setKFactor(value)),
+  gap: numeric((store, value) => store.setGap(value)),
+  bendLinesEnabled: flag((store, value) => store.setBendLinesEnabled(value)),
+  bendLinesCount: numeric((store, value) => store.setBendLinesCount(value)),
+  eccentricity: numeric((store, value) => store.setEccentricity(value)),
+  seamPosition: oneOf(SEAM_POSITIONS, (store, value) => store.setSeamPosition(value)),
+  seamAngleDeg: numeric((store, value) => store.setSeamAngle(value)),
+  stationCount: numeric((store, value) => store.setStationCount(value)),
+  density: numeric((store, value) => store.setDensity(value)),
+  bendDimensionsEnabled: flag((store, value) => store.setBendDimensionsEnabled(value)),
+  bendDimensionOffset: numeric((store, value) => store.setBendDimensionOffset(value)),
 };
 
-function collectParams(): SharedParams {
-  const s = useShellStore.getState();
-  return {
-    mode: s.mode,
-    specType: s.specType,
-    d1: s.d1,
-    d2: s.d2,
-    h: s.h,
-    thickness: s.thickness,
-    kFactor: s.kFactor,
-    gap: s.gap,
-    bendLinesEnabled: s.bendLinesEnabled,
-    bendLinesCount: s.bendLinesCount,
-    eccentricity: s.eccentricity,
-    seamPosition: s.seamPosition,
-    seamAngleDeg: s.seamAngleDeg,
-    stationCount: s.stationCount,
-    density: s.density,
-    bendDimensionsEnabled: s.bendDimensionsEnabled,
-    bendDimensionOffset: s.bendDimensionOffset,
-  };
-}
+const PARAM_KEYS = Object.keys(PARAM_APPLIERS) as Array<keyof ShellParameters>;
 
-function finiteNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+export function collectParams(): SharedParams {
+  const state = useShellStore.getState();
+  const params = {} as Record<string, unknown>;
+
+  for (const key of PARAM_KEYS) {
+    params[key] = state[key];
+  }
+
+  // Safe by construction: PARAM_KEYS is exactly `keyof ShellParameters`.
+  return params as unknown as SharedParams;
 }
 
 /**
  * Applies a restored state through the store's sanitizing setters, so every
- * value passes the same clamping as manual input. Unknown keys and invalid
- * values are ignored — a hand-edited link degrades to defaults per field.
+ * value passes the same clamping as manual input. Unknown keys, missing keys
+ * and invalid values are ignored — a hand-edited or older link degrades to the
+ * defaults per field instead of failing as a whole.
+ *
+ * Exported for testing; the runtime entry point is {@link initShareLink}.
  */
-function applySharedState(state: unknown): void {
+export function applySharedState(state: unknown): void {
   if (!state || typeof state !== 'object') return;
+
   const raw = state as Record<string, unknown>;
   const store = useShellStore.getState();
 
-  if (raw.mode === 'cylinder' || raw.mode === 'cone' || raw.mode === 'eccentric-cone') store.setMode(raw.mode);
-  if (raw.specType === 'OD' || raw.specType === 'ID') store.setSpecType(raw.specType);
-
-  const d1 = finiteNumber(raw.d1);
-  if (d1 !== undefined) store.setD1(d1);
-  const d2 = finiteNumber(raw.d2);
-  if (d2 !== undefined) store.setD2(d2);
-  const h = finiteNumber(raw.h);
-  if (h !== undefined) store.setHeight(h);
-  const thickness = finiteNumber(raw.thickness);
-  if (thickness !== undefined) store.setThickness(thickness);
-  const kFactor = finiteNumber(raw.kFactor);
-  if (kFactor !== undefined) store.setKFactor(kFactor);
-  const gap = finiteNumber(raw.gap);
-  if (gap !== undefined) store.setGap(gap);
-  if (typeof raw.bendLinesEnabled === 'boolean') store.setBendLinesEnabled(raw.bendLinesEnabled);
-  const bendLinesCount = finiteNumber(raw.bendLinesCount);
-  if (bendLinesCount !== undefined) store.setBendLinesCount(bendLinesCount);
-
-  // Eccentric cone fields are optional: links created before this mode existed
-  // simply keep the defaults for them.
-  const eccentricity = finiteNumber(raw.eccentricity);
-  if (eccentricity !== undefined) store.setEccentricity(eccentricity);
-  if (raw.seamPosition === 'short' || raw.seamPosition === 'long' || raw.seamPosition === 'custom') {
-    store.setSeamPosition(raw.seamPosition);
+  for (const key of PARAM_KEYS) {
+    if (!(key in raw)) continue;
+    PARAM_APPLIERS[key](raw[key], store);
   }
-  const seamAngleDeg = finiteNumber(raw.seamAngleDeg);
-  if (seamAngleDeg !== undefined) store.setSeamAngle(seamAngleDeg);
-  const stationCount = finiteNumber(raw.stationCount);
-  if (stationCount !== undefined) store.setStationCount(stationCount);
-  const density = finiteNumber(raw.density);
-  if (density !== undefined) store.setDensity(density);
-  if (typeof raw.bendDimensionsEnabled === 'boolean') store.setBendDimensionsEnabled(raw.bendDimensionsEnabled);
-  const bendDimensionOffset = finiteNumber(raw.bendDimensionOffset);
-  if (bendDimensionOffset !== undefined) store.setBendDimensionOffset(bendDimensionOffset);
 }
 
 let initialized = false;
@@ -124,7 +133,11 @@ export function initShareLink(): void {
     const data: unknown = event.data;
     if (!data || typeof data !== 'object') return;
     const message = data as { type?: unknown; version?: unknown; state?: unknown };
-    if (message.type === MESSAGE_RESTORE && message.version === SCHEMA_VERSION) {
+    if (
+      message.type === MESSAGE_RESTORE &&
+      typeof message.version === 'number' &&
+      SUPPORTED_SCHEMA_VERSIONS.includes(message.version)
+    ) {
       applySharedState(message.state);
     }
   });

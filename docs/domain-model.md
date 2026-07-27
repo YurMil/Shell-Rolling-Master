@@ -9,17 +9,29 @@ Store: `src/store/useShellStore.ts`
 
 ## Shape and specification enums
 
+Declared as runtime tuples with the unions derived from them, so any code that
+validates a value arriving from outside the app (share links, query parameters)
+iterates the same source of truth the type is built from:
+
 ```ts
-type ShapeType = 'cylinder' | 'cone';
-type SpecType = 'OD' | 'ID';
+const SHAPE_TYPES = ['cylinder', 'cone', 'eccentric-cone'] as const;
+const SPEC_TYPES = ['OD', 'ID'] as const;
+const SEAM_POSITIONS = ['short', 'long', 'custom'] as const;
+
+type ShapeType = typeof SHAPE_TYPES[number];
+type SpecType = typeof SPEC_TYPES[number];
+type SeamPosition = typeof SEAM_POSITIONS[number];
 ```
 
 | Value | Meaning |
 |-------|---------|
 | `cylinder` | Constant neutral diameter; rectangular blank |
-| `cone` | Frustum; annular-sector blank |
+| `cone` | Straight frustum; annular-sector blank |
+| `eccentric-cone` | Oblique frustum (offset axes); free-form blank from an exact isometric development |
 | `OD` | Entered diameters are outer diameters |
 | `ID` | Entered diameters are inner diameters |
+| `short` / `long` | Seam on the shortest / longest ruling (computed from the sign of `R2 − R1`) |
+| `custom` | Seam at `seamAngleDeg` |
 
 ---
 
@@ -38,7 +50,14 @@ Input set driving every calculation and export.
 | `kFactor` | `number` | — | Neutral-axis position (0–1) |
 | `gap` | `number` | mm | Weld / seam opening |
 | `bendLinesEnabled` | `boolean` | — | Emit roll guide lines |
-| `bendLinesCount` | `number` | — | Number of guide lines when enabled |
+| `bendLinesCount` | `number` | — | Number of guide lines when enabled (cylinder / cone) |
+| `eccentricity` | `number` | mm | Lateral offset of the top circle centre along +X (eccentric cone) |
+| `seamPosition` | `SeamPosition` | — | Where the development is cut open |
+| `seamAngleDeg` | `number` | deg | Seam angle when `seamPosition` is `'custom'` |
+| `stationCount` | `number` | — | Layout stations = bend lines + 1 (8–360); also the report table grid |
+| `density` | `number` | kg/m³ | Material density used for the blank mass |
+| `bendDimensionsEnabled` | `boolean` | — | Dimension the chords between bend-line endpoints |
+| `bendDimensionOffset` | `number` | mm | Distance from the edge to the dimension line |
 
 ### Default store values
 
@@ -54,6 +73,13 @@ Input set driving every calculation and export.
 | `gap` | `2` |
 | `bendLinesEnabled` | `false` |
 | `bendLinesCount` | (store default; typically ≥ 1 when enabled) |
+| `eccentricity` | `250` |
+| `seamPosition` | `'short'` |
+| `seamAngleDeg` | `0` |
+| `stationCount` | `24` |
+| `density` | `7850` |
+| `bendDimensionsEnabled` | `false` |
+| `bendDimensionOffset` | `120` |
 
 ---
 
@@ -125,21 +151,17 @@ Solid build: `src/cad/geometry/build-shell-solid.ts`
 Serialized for host sync (inputs only; results recomputed on restore):
 
 ```ts
-type SharedParams = {
-  mode: ShapeType;
-  specType: SpecType;
-  d1: number;
-  d2: number;
-  h: number;
-  thickness: number;
-  kFactor: number;
-  gap: number;
-  bendLinesEnabled: boolean;
-  bendLinesCount: number;
-};
+type SharedParams = ShellParameters;
 ```
 
-Schema version: **1** (`src/shareLink.ts`).
+Every input parameter is shared — the payload *is* `ShellParameters`. Parsing
+and serialisation go through a
+`Record<keyof ShellParameters, ParamApplier>` table, so adding an input
+parameter does not compile until it is wired into the protocol, and the payload
+cannot drift from the parameter set.
+
+Schema version: **1** (`src/shareLink.ts`); versions `1` and `2` are accepted on
+restore. See [export-formats.md](./export-formats.md#share-state-protocol).
 
 ---
 
