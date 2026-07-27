@@ -1,5 +1,5 @@
 import { useShellStore } from './store/useShellStore';
-import type { ShapeType, SpecType } from './features/calculator/types';
+import type { SeamPosition, ShapeType, SpecType } from './features/calculator/types';
 
 /**
  * Share-link protocol (cadautoscript.com issue #113).
@@ -28,6 +28,13 @@ type SharedParams = {
   gap: number;
   bendLinesEnabled: boolean;
   bendLinesCount: number;
+  eccentricity: number;
+  seamPosition: SeamPosition;
+  seamAngleDeg: number;
+  stationCount: number;
+  density: number;
+  bendDimensionsEnabled: boolean;
+  bendDimensionOffset: number;
 };
 
 function collectParams(): SharedParams {
@@ -43,6 +50,13 @@ function collectParams(): SharedParams {
     gap: s.gap,
     bendLinesEnabled: s.bendLinesEnabled,
     bendLinesCount: s.bendLinesCount,
+    eccentricity: s.eccentricity,
+    seamPosition: s.seamPosition,
+    seamAngleDeg: s.seamAngleDeg,
+    stationCount: s.stationCount,
+    density: s.density,
+    bendDimensionsEnabled: s.bendDimensionsEnabled,
+    bendDimensionOffset: s.bendDimensionOffset,
   };
 }
 
@@ -60,7 +74,7 @@ function applySharedState(state: unknown): void {
   const raw = state as Record<string, unknown>;
   const store = useShellStore.getState();
 
-  if (raw.mode === 'cylinder' || raw.mode === 'cone') store.setMode(raw.mode);
+  if (raw.mode === 'cylinder' || raw.mode === 'cone' || raw.mode === 'eccentric-cone') store.setMode(raw.mode);
   if (raw.specType === 'OD' || raw.specType === 'ID') store.setSpecType(raw.specType);
 
   const d1 = finiteNumber(raw.d1);
@@ -78,6 +92,23 @@ function applySharedState(state: unknown): void {
   if (typeof raw.bendLinesEnabled === 'boolean') store.setBendLinesEnabled(raw.bendLinesEnabled);
   const bendLinesCount = finiteNumber(raw.bendLinesCount);
   if (bendLinesCount !== undefined) store.setBendLinesCount(bendLinesCount);
+
+  // Eccentric cone fields are optional: links created before this mode existed
+  // simply keep the defaults for them.
+  const eccentricity = finiteNumber(raw.eccentricity);
+  if (eccentricity !== undefined) store.setEccentricity(eccentricity);
+  if (raw.seamPosition === 'short' || raw.seamPosition === 'long' || raw.seamPosition === 'custom') {
+    store.setSeamPosition(raw.seamPosition);
+  }
+  const seamAngleDeg = finiteNumber(raw.seamAngleDeg);
+  if (seamAngleDeg !== undefined) store.setSeamAngle(seamAngleDeg);
+  const stationCount = finiteNumber(raw.stationCount);
+  if (stationCount !== undefined) store.setStationCount(stationCount);
+  const density = finiteNumber(raw.density);
+  if (density !== undefined) store.setDensity(density);
+  if (typeof raw.bendDimensionsEnabled === 'boolean') store.setBendDimensionsEnabled(raw.bendDimensionsEnabled);
+  const bendDimensionOffset = finiteNumber(raw.bendDimensionOffset);
+  if (bendDimensionOffset !== undefined) store.setBendDimensionOffset(bendDimensionOffset);
 }
 
 let initialized = false;

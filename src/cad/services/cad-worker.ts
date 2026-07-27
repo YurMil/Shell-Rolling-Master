@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import type { OpenCascadeInstance } from 'replicad-opencascadejs';
+import { buildEccentricConeSolid } from '../geometry/build-eccentric-cone-solid';
 import { buildShellSolid } from '../geometry/build-shell-solid';
 import { assertValidShellCadGeometry } from '../geometry/validation';
 import type {
@@ -105,7 +106,9 @@ ctx.onmessage = async (event: MessageEvent<ShellCadWorkerRequest>) => {
         assertValidShellCadGeometry(request.geometry);
         post({ type: 'progress', requestId, stage: 'geometry', done: 1, total: 2 });
 
-        const solid = buildShellSolid(replicadModule, request.geometry);
+        const solid = request.geometry.kind === 'eccentric'
+            ? buildEccentricConeSolid(replicadModule, request.geometry)
+            : buildShellSolid(replicadModule, request.geometry);
         if (!solid || solid.isNull) {
             throw new Error('Failed to build a valid shell solid.');
         }

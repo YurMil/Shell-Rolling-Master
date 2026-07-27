@@ -1,5 +1,5 @@
 import type { Shape3D } from 'replicad';
-import type { ShellCadGeometry } from '../types/cad-types';
+import type { RevolvedShellCadGeometry } from '../types/cad-types';
 
 type ReplicadModule = typeof import('replicad');
 
@@ -40,7 +40,7 @@ type DrawFactory = (initialPoint?: [number, number]) => {
     close(): ClosedDrawing;
 };
 
-const getReplicadExport = <TExport,>(
+export const getReplicadExport = <TExport,>(
     replicadModule: ReplicadModule,
     exportName: string,
 ): TExport | undefined => {
@@ -89,7 +89,7 @@ const buildGapSectorPoints = (
 
 const buildGapCutter = (
     replicadModule: ReplicadModule,
-    geometry: ShellCadGeometry,
+    geometry: RevolvedShellCadGeometry,
 ): Shape3D | null => {
     if (geometry.gapAngle <= 0.000001) {
         return null;
@@ -116,7 +116,7 @@ const buildGapCutter = (
 
 export const buildShellSolid = (
     replicadModule: ReplicadModule,
-    geometry: ShellCadGeometry,
+    geometry: RevolvedShellCadGeometry,
 ): Shape3D => {
     const Sketcher = getSketcherConstructor(replicadModule);
     const halfHeight = geometry.height / 2;

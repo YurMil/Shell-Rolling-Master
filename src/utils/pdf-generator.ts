@@ -2,6 +2,7 @@
 import { jsPDF } from 'jspdf';
 import type { ShellParameters, CalculationResult } from '../features/calculator/types';
 import { getConePatternAngles, getConePatternPoints } from './cone-pattern';
+import { generateEccentricConeReport } from './eccentric-cone-report';
 
 const drawPolyline = (doc: jsPDF, points: Array<{ x: number; y: number }>) => {
     for (let i = 1; i < points.length; i += 1) {
@@ -22,6 +23,11 @@ const sampleArcPoints = (r: number, startAngle: number, endAngle: number, segmen
 };
 
 export const generatePDF = (params: ShellParameters, result: CalculationResult) => {
+    if (params.mode === 'eccentric-cone') {
+        generateEccentricConeReport(params, result);
+        return;
+    }
+
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageWidth = 297;
     const pageHeight = 210;

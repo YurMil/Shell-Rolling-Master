@@ -5,6 +5,7 @@ import { computeShellCadGeometry } from '../../cad/geometry/compute-shell-cad-ge
 import { useShellCad } from '../../cad/hooks/useShellCad';
 import type { ShellCadWorkerProgress } from '../../cad/services/cad-worker-protocol';
 import { cn } from '../../components/ui/cn';
+import type { ShapeType } from './types';
 
 const getProgressLabel = (message: ShellCadWorkerProgress) => {
     if (message.stage === 'init') {
@@ -22,27 +23,29 @@ const getProgressLabel = (message: ShellCadWorkerProgress) => {
 
 const downloadStepFile = (
     stepBuffer: ArrayBuffer,
-    mode: 'cylinder' | 'cone',
+    mode: ShapeType,
     d1: number,
     d2: number,
     height: number,
     thickness: number,
+    eccentricity: number,
 ) => {
     const blob = new Blob([stepBuffer], { type: 'application/step' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
-    const diameterPart = mode === 'cone'
-        ? `D${Math.round(d1)}-${Math.round(d2)}`
-        : `D${Math.round(d1)}`;
+    const diameterPart = mode === 'cylinder'
+        ? `D${Math.round(d1)}`
+        : `D${Math.round(d1)}-${Math.round(d2)}`;
+    const eccentricPart = mode === 'eccentric-cone' ? `_e${Math.round(eccentricity)}` : '';
 
     anchor.href = url;
-    anchor.download = `shell-rolling-${mode}_${diameterPart}_H${Math.round(height)}_T${Math.round(thickness * 100) / 100}.step`;
+    anchor.download = `shell-rolling-${mode}_${diameterPart}${eccentricPart}_H${Math.round(height)}_T${Math.round(thickness * 100) / 100}.step`;
     anchor.click();
     URL.revokeObjectURL(url);
 };
 
 export const StepExportButton: React.FC = () => {
-    const { mode, d1, d2, h, thickness, gap, kFactor, results } = useShellStore();
+    const { mode, d1, d2, h, thickness, gap, kFactor, eccentricity, seamPosition, seamAngleDeg, results } = useShellStore();
     const { workerStatus, workerError, generateStep } = useShellCad();
     const [isGenerating, setIsGenerating] = useState(false);
     const [statusText, setStatusText] = useState('');
@@ -72,7 +75,7 @@ export const StepExportButton: React.FC = () => {
 
         try {
             const geometry = computeShellCadGeometry({
-                params: { mode, h, thickness, gap, kFactor },
+                params: { mode, h, thickness, gap, kFactor, eccentricity, seamPosition, seamAngleDeg },
                 results,
             });
             const step = await generateStep(geometry, {
@@ -81,7 +84,7 @@ export const StepExportButton: React.FC = () => {
                 },
             });
 
-            downloadStepFile(step, mode, d1, d2, h, thickness);
+            downloadStepFile(step, mode, d1, d2, h, thickness, eccentricity);
             setSuccessText('STEP file generated successfully.');
             setStatusText('Done');
         } catch (error) {

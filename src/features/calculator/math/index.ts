@@ -1,6 +1,7 @@
 import type { CalculationResult, ShellParameters } from '../types';
 import { calculateCone } from './cone';
 import { calculateCylinder } from './cylinder';
+import { calculateEccentricCone } from './eccentric-cone';
 import { buildBaseResult, buildInvalidResult, calculateNeutralDiameters, validateBaseParams, validateNeutralThickness } from './shared';
 
 export const calculateShell = (params: ShellParameters): CalculationResult => {
@@ -20,10 +21,17 @@ export const calculateShell = (params: ShellParameters): CalculationResult => {
 
     const base = buildBaseResult(params, d1_n, d2_n);
 
-    return params.mode === 'cylinder'
-        ? calculateCylinder(params, base)
-        : calculateCone(params, base);
+    if (params.mode === 'cylinder') {
+        return calculateCylinder(params, base);
+    }
+
+    if (params.mode === 'eccentric-cone') {
+        return calculateEccentricCone(params, base);
+    }
+
+    return calculateCone(params, base);
 };
 
 export { calculateCylinder } from './cylinder';
 export { calculateCone } from './cone';
+export { calculateEccentricCone } from './eccentric-cone';
