@@ -45,6 +45,22 @@ ASCII DXF entities:
 - Drawn on a dashed red layer named **`BEND`**
 - Positions match the 2D pattern / calculation `bendLines` array
 
+### Bend-line dimensions (optional)
+
+Available in **every** shape mode when bend lines are enabled.
+
+- Layer **`BEND_DIMS`**
+- Aligned (parallel) dimensions of the spacing between consecutive bend-line
+  endpoints, plus the length of both seam edges
+- Cylinder: one run along the blank — the two edges are parallel, so a second
+  run would repeat the same numbers. Cone and eccentric cone: one run per edge,
+  because the two arcs have different chord lengths
+- Built from plain R12 primitives (extension lines, dimension line, ticks and a
+  centred `TEXT` via group codes 72/11/21) — no blocks, no `DIMENSION` entities
+- Geometry comes from `src/utils/pattern-dimensions.ts`, shared with the 2D
+  preview, so the screen and the file always show the same values
+- Offset from the edge is the `bendDimensionOffset` parameter
+
 ### Notes
 
 - Coordinates are millimetres in pattern space.

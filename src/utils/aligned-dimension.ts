@@ -1,4 +1,5 @@
 import type { Point2D } from '../features/calculator/types';
+import type { PatternStation } from './pattern-stations';
 
 export interface AlignedDimension {
     /** Dimension line, parallel to the measured segment. */
@@ -80,59 +81,84 @@ export const buildAlignedDimension = (
     };
 };
 
+export interface PatternDimensionOptions {
+    /** Distance from the measured edge to the dimension line. */
+    offset: number;
+    textHeight: number;
+    /**
+     * Dimension the `b` edge as well. Pointless on a cylinder blank, where both
+     * edges are parallel and would carry identical numbers.
+     */
+    bothEdges?: boolean;
+    /** Also dimension the first and last station lines (the seam edges). */
+    seams?: boolean;
+}
+
 /**
- * Chord dimensions between consecutive bend-line endpoints, on both edges, plus
- * the length of each seam ruling.
+ * Dimension run along a chain of stations: the spacing between consecutive
+ * bend-line endpoints on each edge, plus the length of the two seam edges.
  *
- * `bottomEdge` / `topEdge` hold the station points only (not the full contour).
+ * Works for every pattern shape, because it only looks at the station
+ * endpoints — a rectangular blank, an annular sector and a free-form eccentric
+ * development all reduce to the same chain.
  */
 export const buildDevelopmentDimensions = (
-    bottomStations: Point2D[],
-    topStations: Point2D[],
-    offset: number,
-    textHeight: number
+    stations: PatternStation[],
+    { offset, textHeight, bothEdges = true, seams = true }: PatternDimensionOptions
 ): AlignedDimension[] => {
     const dimensions: AlignedDimension[] = [];
-    const count = Math.min(bottomStations.length, topStations.length);
+    if (stations.length < 2) return dimensions;
 
     const awayFrom = (from: Point2D, to: Point2D): Point2D => ({ x: from.x - to.x, y: from.y - to.y });
 
-    for (let i = 0; i < count - 1; i += 1) {
-        const bottomAway = awayFrom(bottomStations[i], topStations[i]);
-        const bottom = buildAlignedDimension(
-            bottomStations[i],
-            bottomStations[i + 1],
-            bottomAway,
+    for (let i = 0; i < stations.length - 1; i += 1) {
+        const current = stations[i];
+        const next = stations[i + 1];
+
+        const alongA = buildAlignedDimension(
+            current.a,
+            next.a,
+            awayFrom(current.a, current.b),
             offset,
             textHeight
         );
-        if (bottom) dimensions.push(bottom);
+        if (alongA) dimensions.push(alongA);
 
-        const topAway = awayFrom(topStations[i], bottomStations[i]);
-        const top = buildAlignedDimension(topStations[i], topStations[i + 1], topAway, offset, textHeight);
-        if (top) dimensions.push(top);
-    }
+        if (!bothEdges) continue;
 
-    // Seam rulings: measured towards the outside of the blank.
-    if (count >= 2) {
-        const first = buildAlignedDimension(
-            bottomStations[0],
-            topStations[0],
-            awayFrom(bottomStations[0], bottomStations[1]),
-            offset * 1.5,
+        const alongB = buildAlignedDimension(
+            current.b,
+            next.b,
+            awayFrom(current.b, current.a),
+            offset,
             textHeight
         );
-        if (first) dimensions.push(first);
-
-        const last = buildAlignedDimension(
-            bottomStations[count - 1],
-            topStations[count - 1],
-            awayFrom(bottomStations[count - 1], bottomStations[count - 2]),
-            offset * 1.5,
-            textHeight
-        );
-        if (last) dimensions.push(last);
+        if (alongB) dimensions.push(alongB);
     }
+
+    if (!seams) return dimensions;
+
+    // Seam edges, measured towards the outside of the blank.
+    const first = stations[0];
+    const last = stations[stations.length - 1];
+
+    const firstSeam = buildAlignedDimension(
+        first.a,
+        first.b,
+        awayFrom(first.a, stations[1].a),
+        offset * 1.5,
+        textHeight
+    );
+    if (firstSeam) dimensions.push(firstSeam);
+
+    const lastSeam = buildAlignedDimension(
+        last.a,
+        last.b,
+        awayFrom(last.a, stations[stations.length - 2].a),
+        offset * 1.5,
+        textHeight
+    );
+    if (lastSeam) dimensions.push(lastSeam);
 
     return dimensions;
 };

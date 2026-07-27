@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import type { CalculationResult, Point2D } from '../calculator/types';
 import { useShellStore } from '../../store/useShellStore';
-import { buildDevelopmentDimensions } from '../../utils/aligned-dimension';
+import { buildPatternDimensions } from '../../utils/pattern-dimensions';
+import { DimensionOverlay } from './DimensionOverlay';
 import { PatternLayout, type PatternViewModel } from './PatternLayout';
 
 /**
@@ -29,8 +30,7 @@ const toPath = (bottom: Point2D[], top: Point2D[]): string => {
 
 export const EccentricConePatternView: React.FC<{ results: CalculationResult }> = ({ results }) => {
     const { eccentric, flatLength, flatWidth, bboxMinX, bboxMinY, bendLines } = results;
-    const { bendLinesEnabled, bendDimensionsEnabled, bendDimensionOffset } = useShellStore();
-    const showDimensions = bendLinesEnabled && bendDimensionsEnabled;
+    const params = useShellStore();
 
     const viewModel = useMemo<PatternViewModel | null>(() => {
         if (!eccentric || eccentric.bottomEdge.length < 2) return null;
@@ -43,20 +43,14 @@ export const EccentricConePatternView: React.FC<{ results: CalculationResult }> 
         // Mirrored frame: the top of the sheet in display space is -(minY + height).
         const minY = -((bboxMinY ?? 0) + height);
 
-        const padding = Math.max(width, height) * 0.15;
         const fontSize = Math.max(12, Math.max(width, height) * 0.025);
         const dimFontSize = fontSize * 0.65;
 
-        // Dimensions are computed in the mirrored (display) frame, so the helper's
+        // Dimensions are built in the mirrored (display) frame, so the helper's
         // text angles can be handed straight to SVG's rotate().
-        const dimensions = showDimensions
-            ? buildDevelopmentDimensions(
-                eccentric.stations.map(station => flip(station.bottom)),
-                eccentric.stations.map(station => flip(station.top)),
-                bendDimensionOffset,
-                dimFontSize
-            )
-            : [];
+        const dimensions = buildPatternDimensions(params, results, dimFontSize, flip);
+        // Dimensions sit outside the blank, so the viewport has to make room for them.
+        const padding = Math.max(width, height) * 0.15 + (dimensions.length > 0 ? params.bendDimensionOffset * 2 : 0);
 
         return {
             viewBox: `${minX - padding} ${minY - padding} ${width + padding * 2} ${height + padding * 2}`,
@@ -96,31 +90,7 @@ export const EccentricConePatternView: React.FC<{ results: CalculationResult }> 
                         />
                     ))}
 
-                    {dimensions.map((dimension, index) => (
-                        <g key={`dim-${index}`} stroke="#8fe6d0" strokeWidth={Math.max(0.5, dimFontSize * 0.05)}>
-                            {[...dimension.extensions, dimension.line, ...dimension.ticks].map((segment, segmentIndex) => (
-                                <line
-                                    key={segmentIndex}
-                                    x1={segment.x1}
-                                    y1={segment.y1}
-                                    x2={segment.x2}
-                                    y2={segment.y2}
-                                />
-                            ))}
-                            <text
-                                x={dimension.textX}
-                                y={dimension.textY}
-                                textAnchor="middle"
-                                stroke="none"
-                                fill="#8fe6d0"
-                                fontSize={dimFontSize}
-                                fontFamily="Roboto, sans-serif"
-                                transform={`rotate(${dimension.angleDeg}, ${dimension.textX}, ${dimension.textY})`}
-                            >
-                                {dimension.text}
-                            </text>
-                        </g>
-                    ))}
+                    <DimensionOverlay dimensions={dimensions} fontSize={dimFontSize} />
 
                     {/* Seam markers: first and last ruling of the development. */}
                     <text
@@ -160,7 +130,7 @@ export const EccentricConePatternView: React.FC<{ results: CalculationResult }> 
                 </>
             )
         };
-    }, [eccentric, flatLength, flatWidth, bboxMinX, bboxMinY, bendLines, showDimensions, bendDimensionOffset]);
+    }, [params, results, eccentric, flatLength, flatWidth, bboxMinX, bboxMinY, bendLines]);
 
     if (!viewModel) {
         return <div className="w-full h-full flex items-center justify-center text-gray-400">Invalid or No Geometry</div>;
