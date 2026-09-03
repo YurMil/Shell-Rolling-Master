@@ -5,7 +5,7 @@ import { CylinderShellMesh } from './CylinderShellMesh';
 import { EccentricConeMesh } from './EccentricConeMesh';
 
 export const ShellMesh: React.FC = () => {
-    const { mode } = useShellStore();
+    const mode = useShellStore((s) => s.mode);
 
     if (mode === 'cylinder') return <CylinderShellMesh />;
     if (mode === 'eccentric-cone') return <EccentricConeMesh />;

@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useShellStore } from '../../store/useShellStore';
 import { NumberField, Button } from '../../components/ui';
 import { cn } from '../../components/ui/cn';
@@ -16,8 +17,48 @@ const SEAM_OPTIONS: Array<{ value: SeamPosition; label: string; hint: string }> 
     { value: 'custom', label: 'Custom', hint: 'Seam at an arbitrary angle' }
 ];
 
+const BendStepLabel: React.FC = () => {
+    const bendStep = useShellStore((s) => s.results.bendStep);
+    return <>{bendStep ? `${bendStep.toFixed(1)} mm` : '—'}</>;
+};
+
 export const InputPanel: React.FC = () => {
-    const state = useShellStore();
+    const state = useShellStore(useShallow((s) => ({
+        mode: s.mode,
+        specType: s.specType,
+        d1: s.d1,
+        d2: s.d2,
+        h: s.h,
+        thickness: s.thickness,
+        kFactor: s.kFactor,
+        gap: s.gap,
+        bendLinesEnabled: s.bendLinesEnabled,
+        bendLinesCount: s.bendLinesCount,
+        eccentricity: s.eccentricity,
+        seamPosition: s.seamPosition,
+        seamAngleDeg: s.seamAngleDeg,
+        stationCount: s.stationCount,
+        density: s.density,
+        bendDimensionsEnabled: s.bendDimensionsEnabled,
+        bendDimensionOffset: s.bendDimensionOffset,
+        setMode: s.setMode,
+        setSpecType: s.setSpecType,
+        setD1: s.setD1,
+        setD2: s.setD2,
+        setHeight: s.setHeight,
+        setThickness: s.setThickness,
+        setKFactor: s.setKFactor,
+        setGap: s.setGap,
+        setBendLinesEnabled: s.setBendLinesEnabled,
+        setBendLinesCount: s.setBendLinesCount,
+        setEccentricity: s.setEccentricity,
+        setSeamPosition: s.setSeamPosition,
+        setSeamAngle: s.setSeamAngle,
+        setStationCount: s.setStationCount,
+        setDensity: s.setDensity,
+        setBendDimensionsEnabled: s.setBendDimensionsEnabled,
+        setBendDimensionOffset: s.setBendDimensionOffset,
+    })));
 
     return (
         <div className="w-full h-full flex flex-col p-6">
@@ -118,7 +159,7 @@ export const InputPanel: React.FC = () => {
                             onCommit={state.setBendLinesCount}
                         />
                         <div className="flex items-end text-sm text-gray-300 pb-1">
-                            Step: {state.results.bendStep ? state.results.bendStep.toFixed(1) : '—'} mm
+                            Step: <BendStepLabel />
                         </div>
                     </div>
                 )}
@@ -178,7 +219,7 @@ export const InputPanel: React.FC = () => {
                         <div className="-mt-4 mb-4 text-xs text-gray-500">
                             Splits the development into {state.stationCount} panels — also the station
                             grid of the PDF report. Average step:{' '}
-                            {state.results.bendStep ? `${state.results.bendStep.toFixed(1)} mm` : '—'}
+                            <BendStepLabel />
                         </div>
 
                     </>
@@ -220,20 +261,22 @@ export const InputPanel: React.FC = () => {
 
             <div className="mt-6 space-y-3">
                 <Button variant="primary" onClick={() => {
-                    import('../../utils/pdf-generator').then(mod => mod.generatePDF(state, state.results));
+                    const snapshot = useShellStore.getState();
+                    import('../../utils/pdf-generator').then(mod => mod.generatePDF(snapshot, snapshot.results));
                 }}>
                     <FileText className="w-5 h-5" /> Download PDF Report
                 </Button>
                 <Button variant="secondary" onClick={() => {
                     import('../../utils/dxf-writer').then(mod => {
-                        const dxfContent = mod.generateUnfoldedDxf(state, state.results);
+                        const snapshot = useShellStore.getState();
+                        const dxfContent = mod.generateUnfoldedDxf(snapshot, snapshot.results);
                         const blob = new Blob([dxfContent], { type: 'application/dxf' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = state.mode === 'eccentric-cone'
-                            ? `eccentric-cone_D${Math.round(state.d1)}-${Math.round(state.d2)}_H${Math.round(state.h)}_e${Math.round(state.eccentricity)}.dxf`
-                            : `shell-pattern-${state.mode}.dxf`;
+                        a.download = snapshot.mode === 'eccentric-cone'
+                            ? `eccentric-cone_D${Math.round(snapshot.d1)}-${Math.round(snapshot.d2)}_H${Math.round(snapshot.h)}_e${Math.round(snapshot.eccentricity)}.dxf`
+                            : `shell-pattern-${snapshot.mode}.dxf`;
                         a.click();
                         URL.revokeObjectURL(url);
                     });
