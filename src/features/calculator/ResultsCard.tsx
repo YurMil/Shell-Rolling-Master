@@ -16,7 +16,10 @@ const MODE_LABELS: Record<string, string> = {
 };
 
 export const ResultsCard: React.FC = () => {
-    const { results, mode, thickness, density } = useShellStore();
+    const results = useShellStore((s) => s.results);
+    const mode = useShellStore((s) => s.mode);
+    const thickness = useShellStore((s) => s.thickness);
+    const density = useShellStore((s) => s.density);
     const { isValid, flatLength, flatWidth, angle, rOut, rIn, error, eccentric } = results;
 
     if (!isValid) {
