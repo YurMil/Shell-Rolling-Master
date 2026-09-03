@@ -7,7 +7,8 @@ import { ViewToggle } from './components/ui';
 import { useShellStore } from './store/useShellStore';
 
 function App() {
-  const { viewMode, setViewMode } = useShellStore();
+  const viewMode = useShellStore((s) => s.viewMode);
+  const setViewMode = useShellStore((s) => s.setViewMode);
 
   return (
     <div className="flex flex-col md:flex-row w-full h-full bg-[#141218] text-[#e6e1e5]">

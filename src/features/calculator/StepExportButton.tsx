@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Download, Loader2, Info } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useShellStore } from '../../store/useShellStore';
 import { computeShellCadGeometry } from '../../cad/geometry/compute-shell-cad-geometry';
 import { useShellCad } from '../../cad/hooks/useShellCad';
@@ -45,7 +46,19 @@ const downloadStepFile = (
 };
 
 export const StepExportButton: React.FC = () => {
-    const { mode, d1, d2, h, thickness, gap, kFactor, eccentricity, seamPosition, seamAngleDeg, results } = useShellStore();
+    const { mode, d1, d2, h, thickness, gap, kFactor, eccentricity, seamPosition, seamAngleDeg, results } = useShellStore(useShallow((s) => ({
+        mode: s.mode,
+        d1: s.d1,
+        d2: s.d2,
+        h: s.h,
+        thickness: s.thickness,
+        gap: s.gap,
+        kFactor: s.kFactor,
+        eccentricity: s.eccentricity,
+        seamPosition: s.seamPosition,
+        seamAngleDeg: s.seamAngleDeg,
+        results: s.results,
+    })));
     const { workerStatus, workerError, generateStep } = useShellCad();
     const [isGenerating, setIsGenerating] = useState(false);
     const [statusText, setStatusText] = useState('');

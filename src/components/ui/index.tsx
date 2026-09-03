@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { cn } from './cn';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -84,33 +84,39 @@ export const NumberField: React.FC<NumberFieldProps> = ({
     void min;
     void max;
     void step;
-    const [text, setText] = useState<string>(() => formatCommitted(value));
-    const editingRef = useRef(false);
+    const inputRef = useRef<HTMLInputElement>(null);
     const valueRef = useRef(value);
+    const onCommitRef = useRef(onCommit);
 
     useEffect(() => {
         valueRef.current = value;
-        if (!editingRef.current) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setText(formatCommitted(value));
-        }
+        onCommitRef.current = onCommit;
+    }, [value, onCommit]);
+
+    // Uncontrolled: the DOM owns the draft so 3D/store work cannot freeze or
+    // overwrite the characters the user is looking at.
+    useEffect(() => {
+        const el = inputRef.current;
+        if (!el || el === document.activeElement) return;
+        const next = formatCommitted(value);
+        if (el.value !== next) el.value = next;
     }, [value]);
 
     const revert = () => {
-        editingRef.current = false;
-        setText(formatCommitted(valueRef.current));
+        const el = inputRef.current;
+        if (el) el.value = formatCommitted(valueRef.current);
     };
 
     const commitDraft = (draft: string) => {
         const parsed = parseDraft(draft);
-        editingRef.current = false;
+        const el = inputRef.current;
         if (parsed === null) {
-            setText(formatCommitted(valueRef.current));
+            if (el) el.value = formatCommitted(valueRef.current);
             return;
         }
-        setText(formatCommitted(parsed, draft));
+        if (el) el.value = formatCommitted(parsed, draft);
         if (parsed !== valueRef.current) {
-            onCommit(parsed);
+            onCommitRef.current(parsed);
         }
     };
 
@@ -118,21 +124,26 @@ export const NumberField: React.FC<NumberFieldProps> = ({
         <div className="relative mb-6">
             <input
                 {...props}
+                ref={inputRef}
                 type="text"
                 inputMode={inputMode}
                 autoComplete="off"
+                autoCorrect="off"
                 spellCheck={false}
-                value={text}
+                defaultValue={formatCommitted(value)}
                 onFocus={(e) => {
-                    editingRef.current = true;
+                    e.currentTarget.select();
                     onFocus?.(e);
                 }}
                 onChange={(e) => {
-                    editingRef.current = true;
-                    // Draft stays local until blur/Enter. Live store updates here were
-                    // committing "1" while the user was still typing "10" / "1000", then
-                    // rebuilding 3D and clobbering the field.
-                    setText(sanitizeTyping(e.target.value));
+                    const el = e.currentTarget;
+                    const next = sanitizeTyping(el.value);
+                    if (next === el.value) return;
+                    const pos = el.selectionStart ?? next.length;
+                    const dropped = el.value.length - next.length;
+                    el.value = next;
+                    const caret = Math.max(0, pos - dropped);
+                    el.setSelectionRange(caret, caret);
                 }}
                 onBlur={(e) => {
                     commitDraft(e.currentTarget.value);
