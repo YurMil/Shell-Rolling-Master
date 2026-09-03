@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { cn } from './cn';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -25,34 +25,86 @@ export const NumberInput: React.FC<InputProps> = ({ label, className, ...props }
     );
 };
 
-interface NumberFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'defaultValue'> {
+interface NumberFieldProps extends Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    'value' | 'onChange' | 'defaultValue' | 'type'
+> {
     label: string;
     value: number;
-    // Called with the parsed value on every valid keystroke. The caller/store is responsible
-    // for clamping out-of-range values; this component never forces a fallback while typing.
+    // Called when the draft is committed (blur / Enter). The caller/store clamps
+    // out-of-range values; this component never forces a fallback while typing.
     onCommit: (value: number) => void;
 }
 
-export const NumberField: React.FC<NumberFieldProps> = ({ label, value, onCommit, className, onFocus, onBlur, ...props }) => {
-    const [text, setText] = useState<string>(() => String(value));
-    const [focused, setFocused] = useState(false);
-    const [prevValue, setPrevValue] = useState(value);
-
-    // Reflect external changes (e.g. store sanitisation, mode switches) only while the field
-    // is not being edited, so the user's in-progress input is never clobbered mid-keystroke.
-    // Adjusting state during render by comparing to a previous-value state is React's
-    // recommended way to sync to a changed prop without an effect.
-    if (value !== prevValue) {
-        setPrevValue(value);
-        if (!focused) {
-            setText(String(value));
-        }
+/** Accept both "0.44" and locale "0,44"; reject incomplete drafts like ".", "-", "0,". */
+const parseDraft = (draft: string): number | null => {
+    const normalized = draft.trim().replace(',', '.');
+    if (!normalized || normalized === '-' || normalized === '.' || normalized === '-.') {
+        return null;
     }
+    // Trailing decimal separator is still an in-progress edit.
+    if (normalized.endsWith('.')) {
+        return null;
+    }
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatCommitted = (value: number): string => String(value);
+
+export const NumberField: React.FC<NumberFieldProps> = ({
+    label,
+    value,
+    onCommit,
+    className,
+    onFocus,
+    onBlur,
+    inputMode = 'decimal',
+    ...props
+}) => {
+    const [text, setText] = useState<string>(() => formatCommitted(value));
+    const [focused, setFocused] = useState(false);
+    const valueRef = useRef(value);
+    
+    // Keep ref in sync with the committed store value.
+    // (Must be done in effects, not during render.)
+    useEffect(() => {
+        valueRef.current = value;
+    }, [value]);
+
+    // Reflect external changes only while the field is not being edited, so the user's
+    // in-progress input is never clobbered mid-keystroke.
+    useEffect(() => {
+        if (!focused) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setText(formatCommitted(value));
+        }
+    }, [value, focused]);
+
+    const revert = () => {
+        setText(formatCommitted(valueRef.current));
+        setFocused(false);
+    };
+
+    const commitDraft = (draft: string) => {
+        const parsed = parseDraft(draft);
+        if (parsed === null) {
+            revert();
+            return;
+        }
+        setText(formatCommitted(parsed));
+        setFocused(false);
+        if (parsed !== valueRef.current) {
+            onCommit(parsed);
+        }
+    };
 
     return (
         <div className="relative mb-6">
             <input
-                type="number"
+                {...props}
+                type="text"
+                inputMode={inputMode}
                 value={text}
                 onFocus={(e) => {
                     setFocused(true);
@@ -60,24 +112,39 @@ export const NumberField: React.FC<NumberFieldProps> = ({ label, value, onCommit
                 }}
                 onChange={(e) => {
                     const raw = e.target.value;
+                    setFocused(true);
                     setText(raw);
-                    const parsed = parseFloat(raw);
-                    if (Number.isFinite(parsed)) {
+                    // Live update for the 3D/results preview when the draft is a
+                    // complete number. Incomplete drafts stay local until blur.
+                    const parsed = parseDraft(raw);
+                    if (parsed !== null && parsed !== valueRef.current) {
                         onCommit(parsed);
                     }
                 }}
                 onBlur={(e) => {
-                    setFocused(false);
-                    // Snap the text back to the last valid, store-sanitised value on blur.
-                    setText(String(value));
+                    commitDraft(e.currentTarget.value);
                     onBlur?.(e);
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitDraft(e.currentTarget.value);
+                        e.currentTarget.blur();
+                        return;
+                    }
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        revert();
+                        e.currentTarget.blur();
+                        return;
+                    }
+                    props.onKeyDown?.(e);
                 }}
                 className={cn(
                     "w-full bg-md-surface border border-md-outline rounded-lg px-4 py-3 text-md-secondary text-base transition-all outline-none",
                     "focus:border-md-primary focus:shadow-[0_0_0_2px_rgba(208,188,255,0.2)]",
                     className
                 )}
-                {...props}
             />
             <label className="absolute left-3.5 -top-2.5 bg-md-base px-1 text-xs font-medium text-md-primary">
                 {label}
