@@ -38,7 +38,7 @@ interface NumberFieldProps extends Omit<
 
 /** Accept both "0.44" and locale "0,44"; reject incomplete drafts like ".", "-", "0,". */
 const parseDraft = (draft: string): number | null => {
-    const normalized = draft.trim().replace(',', '.');
+    const normalized = draft.trim().replace(/,/g, '.');
     if (!normalized || normalized === '-' || normalized === '.' || normalized === '-.') {
         return null;
     }
@@ -50,7 +50,22 @@ const parseDraft = (draft: string): number | null => {
     return Number.isFinite(parsed) ? parsed : null;
 };
 
-const formatCommitted = (value: number): string => String(value);
+const formatCommitted = (value: number, draft?: string): string => {
+    const formatted = String(value);
+    return draft?.includes(',') ? formatted.replace('.', ',') : formatted;
+};
+
+/** Keep digits, an optional leading minus, and a single decimal separator (. or ,). */
+const sanitizeTyping = (raw: string): string => {
+    const compact = raw.replace(/\s/g, '');
+    const negative = compact.startsWith('-');
+    const body = (negative ? compact.slice(1) : compact).replace(/[^\d.,]/g, '');
+    const sepIndex = body.search(/[.,]/);
+    const next = sepIndex === -1
+        ? body.replace(/[.,]/g, '')
+        : `${body.slice(0, sepIndex).replace(/[.,]/g, '')}${body[sepIndex]}${body.slice(sepIndex + 1).replace(/[.,]/g, '')}`;
+    return `${negative ? '-' : ''}${next}`;
+};
 
 export const NumberField: React.FC<NumberFieldProps> = ({
     label,
@@ -60,40 +75,40 @@ export const NumberField: React.FC<NumberFieldProps> = ({
     onFocus,
     onBlur,
     inputMode = 'decimal',
+    // min/max/step are call-site documentation only; they must not land on a text input.
+    min,
+    max,
+    step,
     ...props
 }) => {
+    void min;
+    void max;
+    void step;
     const [text, setText] = useState<string>(() => formatCommitted(value));
-    const [focused, setFocused] = useState(false);
+    const editingRef = useRef(false);
     const valueRef = useRef(value);
-    
-    // Keep ref in sync with the committed store value.
-    // (Must be done in effects, not during render.)
+
     useEffect(() => {
         valueRef.current = value;
-    }, [value]);
-
-    // Reflect external changes only while the field is not being edited, so the user's
-    // in-progress input is never clobbered mid-keystroke.
-    useEffect(() => {
-        if (!focused) {
+        if (!editingRef.current) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setText(formatCommitted(value));
         }
-    }, [value, focused]);
+    }, [value]);
 
     const revert = () => {
+        editingRef.current = false;
         setText(formatCommitted(valueRef.current));
-        setFocused(false);
     };
 
     const commitDraft = (draft: string) => {
         const parsed = parseDraft(draft);
+        editingRef.current = false;
         if (parsed === null) {
-            revert();
+            setText(formatCommitted(valueRef.current));
             return;
         }
-        setText(formatCommitted(parsed));
-        setFocused(false);
+        setText(formatCommitted(parsed, draft));
         if (parsed !== valueRef.current) {
             onCommit(parsed);
         }
@@ -105,21 +120,19 @@ export const NumberField: React.FC<NumberFieldProps> = ({
                 {...props}
                 type="text"
                 inputMode={inputMode}
+                autoComplete="off"
+                spellCheck={false}
                 value={text}
                 onFocus={(e) => {
-                    setFocused(true);
+                    editingRef.current = true;
                     onFocus?.(e);
                 }}
                 onChange={(e) => {
-                    const raw = e.target.value;
-                    setFocused(true);
-                    setText(raw);
-                    // Live update for the 3D/results preview when the draft is a
-                    // complete number. Incomplete drafts stay local until blur.
-                    const parsed = parseDraft(raw);
-                    if (parsed !== null && parsed !== valueRef.current) {
-                        onCommit(parsed);
-                    }
+                    editingRef.current = true;
+                    // Draft stays local until blur/Enter. Live store updates here were
+                    // committing "1" while the user was still typing "10" / "1000", then
+                    // rebuilding 3D and clobbering the field.
+                    setText(sanitizeTyping(e.target.value));
                 }}
                 onBlur={(e) => {
                     commitDraft(e.currentTarget.value);
