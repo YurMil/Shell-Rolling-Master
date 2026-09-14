@@ -357,7 +357,7 @@ Store (`useShellStore`) получает сеттеры `setEccentricity`, `setS
 — порядок ключей таблицы, `mode` первым: store пересчитывает результат на
 каждом сеттере, и остальные значения осмысленны только после выбора формы.
 
-Проверка: `npm run verify:share-link` (полный round-trip, реальная ссылка
+Проверка: `src/shareLink.test.ts`, `npm test` (полный round-trip, реальная ссылка
 с сайта, все значения перечислений, устойчивость к битой нагрузке).
 
 ---
@@ -472,10 +472,10 @@ Store (`useShellStore`) получает сеттеры `setEccentricity`, `setS
 
 ## 7. Проверка
 
-Автотест: `tools/verify-eccentric-cone.ts`, запуск
+Автотест: `src/features/calculator/math/eccentric-cone.test.ts`, запуск
 
 ```bash
-npm run verify:eccentric
+npm test
 ```
 
 Числовые сверки (сравнение с независимо известными величинами) и фактически
@@ -522,7 +522,7 @@ npm run verify:eccentric
 | 5. DXF | `utils/dxf-writer.ts` (`addPolyline`, `addText`, `addAlignedDimension`, `generateEccentricConeDxf`), `utils/aligned-dimension.ts` | готово |
 | 6. PDF-отчёт с таблицей станций | `utils/eccentric-cone-report.ts` | готово |
 | 7. STEP | `cad/types/cad-types.ts`, `cad/geometry/build-eccentric-cone-solid.ts`, `cad-worker.ts` | готово |
-| 8. Проверки § 7, share-link, сборка | `tools/verify-eccentric-cone.ts`, `tools/verify-share-link.ts`, `shareLink.ts` | готово |
+| 8. Проверки § 7, share-link, сборка | `math/eccentric-cone.test.ts`, `shareLink.test.ts`, `shareLink.ts` | готово |
 
 Реализованные отличия от первоначального плана:
 

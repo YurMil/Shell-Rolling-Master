@@ -20,15 +20,22 @@ jobs:
         with:
           node-version: '22'
 
-      # 3. Устанавливаем зависимости и собираем
-      - name: Install and Build
+      # 3. Устанавливаем зависимости
+      - name: Install Dependencies
+        run: npm ci
+
+      # 4. Прогоняем юнит-тесты до сборки: упавший тест останавливает деплой
+      - name: Run Unit Tests
+        run: npm test
+
+      # 5. Собираем
+      - name: Build
         run: |
-          npm ci
           npm run build
           mv dist/index.html dist/app.html
         # Теперь у нас есть папка dist с готовой игрой
 
-      # 4. Отправляем папку dist в репозиторий сайта
+      # 6. Отправляем папку dist в репозиторий сайта
       - name: Push to Website Repository
         uses: cpina/github-action-push-to-another-repository@main
         env:
