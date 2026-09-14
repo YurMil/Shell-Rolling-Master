@@ -7,11 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "verify": "npm run verify:eccentric && npm run verify:bend-dimensions && npm run verify:share-link",
-    "verify:eccentric": "esbuild tools/verify-eccentric-cone.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/verify-eccentric-cone.mjs && node node_modules/.cache/verify-eccentric-cone.mjs",
-    "verify:bend-dimensions": "esbuild tools/verify-bend-dimensions.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/verify-bend-dimensions.mjs && node node_modules/.cache/verify-bend-dimensions.mjs",
-    "verify:share-link": "esbuild tools/verify-share-link.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/verify-share-link.mjs && node node_modules/.cache/verify-share-link.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -43,6 +41,7 @@
     "tailwindcss": "^3.4.17",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vitest": "^5.0.0"
   }
 }

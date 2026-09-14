@@ -26,12 +26,28 @@ Dev server: `http://localhost:3000` (bound to `0.0.0.0`).
 | `npm run build` | Production build to `dist/` |
 | `npm run preview` | Preview production build |
 | `npm run lint` | ESLint (TypeScript + React Hooks + Refresh) |
-| `npm run verify` | Numerical and protocol checks (both suites below) |
-| `npm run verify:eccentric` | Eccentric cone development vs. independently known values |
-| `npm run verify:bend-dimensions` | Bend-line spacing dimensions in all three shape modes |
-| `npm run verify:share-link` | Share-link round trip, real link payload, hostile input |
+| `npm test` | Vitest unit tests, single run (used by CI) |
+| `npm run test:watch` | Vitest in watch mode |
 
-There is currently **no** automated unit/e2e test script in `package.json`.
+## Tests
+
+Tests live next to the code they cover (`*.test.ts`) and run in Node — no
+browser, WebGL or WASM is needed.
+
+| Suite | Covers |
+|-------|--------|
+| `math/cylinder.test.ts` | Neutral diameter from OD/ID, developed length, K-factor, weld gap, bend lines |
+| `math/cone.test.ts` | Sector radii and angle, gap on the neutral fibre, blank rectangle |
+| `math/eccentric-cone.test.ts` | Development vs. independently known values (`docs/eccentric-cone.md` § 7) |
+| `math/validation.test.ts` | Invalid and boundary input for every mode |
+| `utils/pattern-dimensions.test.ts` | Bend-line spacing dimensions in all three shape modes |
+| `shareLink.test.ts` | Share-link round trip, real link payload, hostile input |
+
+Reference values are derived by hand from the closed-form relations in
+`docs/calculations.md`, never by pasting the engine's own output. The cylinder
+and cone reference cases are also published as validation cases on the
+[documentation page](https://cadautoscript.com/docs/utilities/cylindrical-shell-rolling),
+so change both together.
 
 ## Stack versions (declared)
 
@@ -93,9 +109,11 @@ Before merging calculation or export changes:
 - [ ] DXF opens in a CAD tool with expected mm scale
 - [ ] STEP opens in a CAD tool as an open-seam thick shell
 - [ ] Embed share restore (if host available) recomputes matching results
-- [ ] `npm run lint`, `npm run verify` and `npm run build` succeed
+- [ ] `npm run lint`, `npm test` and `npm run build` succeed
 
 ## Deployment
+
+Pull requests run `.github/workflows/ci.yml`: `npm ci`, `npm test`, `npm run build`.
 
 Workflow: `.github/workflows/deploy.yml`
 
@@ -105,9 +123,10 @@ Workflow: `.github/workflows/deploy.yml`
 
 1. Checkout source  
 2. Setup Node.js 22  
-3. `npm ci` && `npm run build`  
-4. `mv dist/index.html dist/app.html`  
-5. Push `dist/` to `YurMil/cadautoscript.com` at  
+3. `npm ci`  
+4. `npm test` — a failing test stops the workflow before anything is built or published  
+5. `npm run build` && `mv dist/index.html dist/app.html`  
+6. Push `dist/` to `YurMil/cadautoscript.com` at  
    `static/utility-apps/cylindrical-shell-rolling`  
    using `DEPLOY_TOKEN` (`API_TOKEN_GITHUB`)
 

@@ -147,5 +147,5 @@ Vite configuration highlights (`vite.config.ts`):
 
 - Duplicate geometry paths: lightweight Three.js mesh vs OpenCascade solid (kept consistent via shared offset helpers).
 - Legacy `app.html` at repo root is not the Vite entry; production deploy renames `dist/index.html` → `dist/app.html`.
-- No automated test suite; rely on lint and manual verification for releases.
+- The calculation engine, pattern dimensions and share-link protocol are covered by Vitest (`npm test`); 2D/3D rendering and the DXF/PDF/STEP exports still rely on the manual checklist in `docs/development.md`.
 - `process.env.GEMINI_API_KEY` is defined in Vite config for historical template reasons; the shell calculator does not call Gemini APIs.

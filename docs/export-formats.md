@@ -144,7 +144,7 @@ enumerated values are validated against the `SHAPE_TYPES` / `SPEC_TYPES` /
 `SEAM_POSITIONS` tuples the unions are derived from rather than a repeated
 allow-list.
 
-Implementation: `src/shareLink.ts`. Round-trip checks: `npm run verify:share-link`.
+Implementation: `src/shareLink.ts`. Round-trip checks: `src/shareLink.test.ts` (`npm test`).
 
 ---
 
