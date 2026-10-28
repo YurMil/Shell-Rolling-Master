@@ -38,7 +38,7 @@ browser, WebGL or WASM is needed.
 |-------|--------|
 | `math/cylinder.test.ts` | Neutral diameter from OD/ID, developed length, K-factor, weld gap, bend lines |
 | `math/cone.test.ts` | Sector radii and angle, gap on the neutral fibre, blank rectangle |
-| `math/eccentric-cone.test.ts` | Development vs. independently known values (`docs/eccentric-cone.md` § 7) |
+| `math/eccentric-cone.test.ts` | Development vs. independently known values ([eccentric cone § 7](./eccentric-cone.md#7-verification)) |
 | `math/validation.test.ts` | Invalid and boundary input for every mode |
 | `utils/pattern-dimensions.test.ts` | Bend-line spacing dimensions in all three shape modes |
 | `shareLink.test.ts` | Share-link round trip, real link payload, hostile input |
@@ -143,7 +143,7 @@ When changing behaviour:
 | Change type | Update |
 |-------------|--------|
 | Inputs / validation | `docs/user-guide.md`, `docs/domain-model.md` |
-| Formulas | `docs/calculations.md` |
+| Formulas | `docs/calculations.md`. Eccentric-cone geometry, exports, or the § 7 checks: `docs/eccentric-cone.md` in the same change |
 | Modules / data flow | `docs/architecture.md` |
 | PDF / DXF / STEP / share | `docs/export-formats.md` |
 | Scripts / CI | `docs/development.md`, root `README.md` |

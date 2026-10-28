@@ -1,15 +1,19 @@
 # Calculation Reference
 
-Engineering and algorithmic reference for flat-pattern development in Shell Rolling Master.
+Engineering reference for flat-pattern development in Shell Rolling Master.
+The eccentric (oblique) cone has its own specification:
+[eccentric-cone.md](./eccentric-cone.md). This page is the shared neutral-fibre
+model plus the cylinder and the straight cone.
 
 All linear dimensions are in **millimetres**. Angles are in **degrees** unless noted.
 
 Implementation sources:
 
-- `src/features/calculator/math/shared.ts` — validation & neutral diameters  
-- `src/features/calculator/math/cylinder.ts` — cylinder development  
-- `src/features/calculator/math/cone.ts` — cone development & bounding box  
-- `src/utils/bend-lines.ts` — roll guide geometry  
+- [`shared.ts`](../src/features/calculator/math/shared.ts) — validation and neutral diameters
+- [`cylinder.ts`](../src/features/calculator/math/cylinder.ts) — cylinder development
+- [`cone.ts`](../src/features/calculator/math/cone.ts) — straight-cone development and bounding box
+- [`eccentric-cone.ts`](../src/features/calculator/math/eccentric-cone.ts) — oblique cone ([full write-up](./eccentric-cone.md))
+- [`bend-lines.ts`](../src/utils/bend-lines.ts) — roll guide geometry for cylinder and straight cone
 
 ---
 
@@ -17,9 +21,11 @@ Implementation sources:
 
 Plate bending develops along the **neutral fibre**, not the inner or outer surface. The K-factor \(K\) locates that fibre through the thickness \(t\):
 
-- \(K = 0\) → neutral fibre at the inner surface  
-- \(K = 0.5\) → mid-thickness  
-- \(K = 1\) → neutral fibre at the outer surface  
+- \(K \to 0\) → neutral fibre at the inner surface
+- \(K = 0.5\) → mid-thickness
+- \(K = 1\) → neutral fibre at the outer surface
+
+The app accepts \(0 < K \le 1\). Exactly \(0\) is rejected with the other non-positive inputs ([user guide](./user-guide.md#validation-messages-common)).
 
 The radial offset from the specified surface to the neutral diameter uses:
 
@@ -40,8 +46,8 @@ D_{\text{neutral}} = D_{\text{ID}} + 2Kt
 D_{\text{neutral}} = D_{\text{OD}} - 2t(1 - K)
 \]
 
-For **cylinders**, a single neutral diameter is used (\(D_{2,n} = D_{1,n}\)).  
-For **cones**, \(D_{1,n}\) and \(D_{2,n}\) are computed independently with the same \(K\) and \(t\).
+For **cylinders**, a single neutral diameter is used (\(D_{2,n} = D_{1,n}\)).
+For **both cone modes**, \(D_{1,n}\) (top) and \(D_{2,n}\) (bottom) are computed independently with the same \(K\) and \(t\). Height and, for the eccentric cone, the offset \(e\) are not shifted.
 
 ### Physical check
 
@@ -194,7 +200,9 @@ Seam gap angle (radians):
 
 The shell spans \(2\pi - \alpha_{\text{gap}}\) with the seam centred at \(90^\circ\) (\(\pi/2\)).
 
-Viewer meshes use a discrete segment count (64). STEP solids are built via revolution of a trapezoidal radial profile minus a wedge cutter (OpenCascade / replicad).
+That gap angle is for the revolved cylinder and straight cone only. The eccentric cone removes \(\Delta\varphi = 2g / (R_{\text{bottom}} + R_{\text{top}})\) and places the seam on a chosen ruling ([eccentric cone § 2.4](./eccentric-cone.md#24-weld-gap)).
+
+Viewer meshes for the revolved modes use 64 segments. The eccentric preview uses 128. Cylinder and straight-cone STEP solids are a revolved trapezoidal profile minus a wedge. The eccentric solid is a ruled loft ([eccentric cone § 5.3](./eccentric-cone.md#53-step)).
 
 ---
 
@@ -206,7 +214,7 @@ Viewer meshes use a discrete segment count (64). STEP solids are built via revol
 | Springback / residual stress | Not modelled |
 | Multi-pass roll sequences | Guide lines only; no machine-specific CNC |
 | Material database / automatic K | Manual K-factor input |
-| Closed shells (no seam) | Gap may be 0; geometry remains open-seam topology for STEP |
+| Closed shells (no seam) | Gap may be 0; cylinder and straight-cone STEP stay an open-seam construction. An eccentric cone with gap 0 is a closed solid ([eccentric cone § 5.3](./eccentric-cone.md#53-step)) |
 
 ---
 
@@ -219,7 +227,28 @@ D_n = 2000 - 2\cdot15\cdot(1-0.44) = 2000 - 16.8 = 1983.2\,\text{mm}
 \]
 
 \[
-L = \pi \cdot 1983.2 - 2 \approx 6227.0\,\text{mm}, \qquad W = 2500\,\text{mm}
+L = \pi \cdot 1983.2 - 2 \approx 6228.41\,\text{mm}, \qquad W = 2500\,\text{mm}
 \]
 
-(Exact floating-point values follow the TypeScript `Math.PI` evaluation in the app.)
+The same inputs are the worked example in [`cylinder.test.ts`](../src/features/calculator/math/cylinder.test.ts) and on the [documentation page](https://cadautoscript.com/docs/utilities/cylindrical-shell-rolling). Change the three together.
+
+---
+
+## 7. Eccentric cone
+
+An eccentric cone uses the neutral diameters from § 1, then develops the ruled surface between
+
+\[
+A(\varphi) = (R_{\text{bottom}}\cos\varphi,\ R_{\text{bottom}}\sin\varphi,\ 0), \qquad
+B(\varphi) = (e + R_{\text{top}}\cos\varphi,\ R_{\text{top}}\sin\varphi,\ H)
+\]
+
+with \(R_{\text{top}} = D_{1,n}/2\) and \(R_{\text{bottom}} = D_{2,n}/2\). \(D_1\) is the **top** diameter in the UI, the PDF and the tests.
+
+The flat pattern is the integral of an isometry ODE (RK4), not a sum of chords. Edge lengths come out as \(R\cdot\Delta\varphi\). The weld gap is one angular slice whose **mean** opening on the two edges equals \(g\):
+
+\[
+\Delta\varphi = \frac{2g}{R_{\text{bottom}} + R_{\text{top}}}
+\]
+
+The blank size is the exact minimum-area rectangle of that contour plus the 10 mm cutting margin. Area, mass, seam presets, the station table, DXF layers and the STEP loft are specified in [eccentric-cone.md](./eccentric-cone.md). Equal neutral diameters with \(e = 0\) are rejected; \(e = 0\) with unequal diameters must match § 3.

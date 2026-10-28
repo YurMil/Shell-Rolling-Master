@@ -1,6 +1,8 @@
 # Architecture
 
-Technical architecture of Shell Rolling Master (v0.21.0).
+Technical architecture of Shell Rolling Master (v0.22.0).
+
+Behavioural specs: [calculations](./calculations.md), [eccentric cone](./eccentric-cone.md). Types: [domain model](./domain-model.md). Files on disk: [export formats](./export-formats.md).
 
 ## Runtime model
 
@@ -43,9 +45,9 @@ Technical architecture of Shell Rolling Master (v0.21.0).
 | `src/App.tsx` | Responsive shell: sidebar + workspace |
 | `src/store/useShellStore.ts` | Parameters, results, view mode; setters trigger recalc |
 | `src/features/calculator/` | UI inputs, results, math, STEP button |
-| `src/features/calculator/math/` | Pure development algorithms |
-| `src/features/viewer-2d/` | SVG pattern renderers |
-| `src/features/viewer-3d/` | R3F scene, meshes, view cube |
+| `src/features/calculator/math/` | Pure development algorithms, including `eccentric-cone.ts` and `mbr.ts` |
+| `src/features/viewer-2d/` | SVG pattern renderers, including `EccentricConePatternView` |
+| `src/features/viewer-3d/` | R3F scene, meshes, view cube, including `EccentricConeMesh` |
 | `src/cad/` | CAD geometry, worker client, STEP export |
 | `src/utils/` | DXF, PDF, bend lines, solid geometry helpers |
 | `src/shareLink.ts` | `postMessage` embed protocol |
@@ -55,7 +57,7 @@ Technical architecture of Shell Rolling Master (v0.21.0).
 
 1. **Input** — `InputPanel` calls store setters (`setD1`, `setMode`, …).
 2. **Sanitize** — setters clamp / coerce values as defined in the store.
-3. **Calculate** — `calculateShell` validates, computes neutrals, dispatches cylinder or cone math.
+3. **Calculate** — `calculateShell` validates, computes neutrals, then dispatches cylinder, straight-cone, or eccentric-cone math.
 4. **Publish** — `results: CalculationResult` updates subscribers.
 5. **Render** — results card, 2D pattern, and 3D mesh consume the same result object.
 6. **Export** — PDF/DXF read store state synchronously; STEP sends derived CAD geometry to the worker.
@@ -66,27 +68,30 @@ Results are never stored in share links or host messages — only inputs are ser
 
 ```text
 math/index.ts
-  shared.ts      validateBaseParams, calculateNeutralDiameters, …
-  cylinder.ts    rectangle blank + bend lines
-  cone.ts        sector blank + MBR + CUT_MARGIN
+  shared.ts           validateBaseParams, calculateNeutralDiameters, …
+  cylinder.ts         rectangle blank + bend lines
+  cone.ts             sector blank + sampled MBR + CUT_MARGIN
+  eccentric-cone.ts   isometric ODE, stations, Simpson area
+  mbr.ts              exact minimum rectangle (eccentric contour only)
 ```
 
-Math modules are intentionally pure (no React). Bend-line geometry is shared via `src/utils/bend-lines.ts`.
+Math modules are intentionally pure (no React). Cylinder and straight-cone bend lines are built in `src/utils/bend-lines.ts`. Eccentric bend lines are the interior rulings of the development. The ODE, the seam angle and the STEP loft are specified together in [eccentric-cone.md](./eccentric-cone.md) so the three stay on the same rulings (`getEccentricSeam`).
 
 ## Visualization
 
 ### 3D (`features/viewer-3d`)
 
 - `Scene.tsx` — canvas, lights, grid, orbit controls, auto-fit
-- `ShellMesh` / `CylinderShellMesh` / `ConeShellMesh` — mode-specific meshes
-- `geometry/buildShellGeometry.ts` — thick open-seam buffer geometry (~64 segments)
+- `ShellMesh` / `CylinderShellMesh` / `ConeShellMesh` / `EccentricConeMesh` — mode-specific meshes
+- `geometry/buildShellGeometry.ts` — thick open-seam buffer geometry for the revolved modes (~64 segments)
+- `geometry/buildEccentricConeGeometry.ts` — ruling mesh for the eccentric cone (128 segments)
 - `ViewCube.tsx` — orientation widget
 
 Solid radii use the same K-factor offsets as the CAD path (`shell-solid-geometry.ts`).
 
 ### 2D (`features/viewer-2d`)
 
-- `PatternView.tsx` — switches cylinder / cone pattern components
+- `PatternView.tsx` — switches cylinder, cone, and eccentric-cone pattern components
 - Dimensioned SVG for shop preview; bend lines optional
 
 ## CAD / STEP pipeline
@@ -97,7 +102,8 @@ UI (StepExportButton)
   → useShellCad / cad-worker-client
   → cad-worker.ts (Web Worker)
        ├─ lazy-load replicad + opencascade WASM
-       ├─ build-shell-solid (revolve profile − seam wedge)
+       ├─ build-shell-solid (revolve profile − seam wedge) for cylinder and cone
+       ├─ build-eccentric-cone-solid (ruled loft; boolean only when the gap is 0)
        └─ solid.blobSTEP() → ArrayBuffer → download
 ```
 
@@ -113,7 +119,8 @@ Key files:
 | `cad/services/cad-worker-client.ts` | Main-thread client |
 | `cad/services/cad-worker-protocol.ts` | Message types |
 | `cad/geometry/compute-shell-cad-geometry.ts` | Parametric CAD radii / angles |
-| `cad/geometry/build-shell-solid.ts` | OpenCascade solid construction |
+| `cad/geometry/build-shell-solid.ts` | Revolved open-seam solid |
+| `cad/geometry/build-eccentric-cone-solid.ts` | Eccentric ruled loft ([spec § 5.3](./eccentric-cone.md#53-step)) |
 | `cad/geometry/validation.ts` | Pre-export geometry checks |
 
 ## State management conventions
@@ -137,7 +144,7 @@ Vite configuration highlights (`vite.config.ts`):
 
 | Goal | Preferred seam |
 |------|----------------|
-| New development formula | Add pure function under `math/` + wire in index |
+| New development formula | Add a pure function under `math/`, wire it in `math/index.ts`, and add a `*.test.ts` whose references are not copied from the engine's own output ([development](./development.md#tests)) |
 | New export format | New util + button in calculator panel; reuse `CalculationResult` |
 | Persist projects | Serialize `SharedParams` (or full store inputs); rehydrate via setters |
 | Kerf compensation | Apply in math before DXF; keep PDF/bbox reporting explicit |
