@@ -4,7 +4,7 @@ import type { ShellParameters } from '../features/calculator/types';
 import { buildRolledDimensionLayout } from '../features/viewer-3d/geometry/buildRolledDimensions';
 import { shellParams } from '../test/params';
 import { computeDrawingScale, pickDrawingScale } from './rolled-part-sheet';
-import { computeRolledShell, formatDimension } from './rolled-shell';
+import { computeRolledShell, formatDimension, formatSeamGap } from './rolled-shell';
 
 // Finished-part dimensions shown in the 3D overlay and on the PDF "rolled part" sheet.
 
@@ -59,6 +59,25 @@ describe('computeRolledShell', () => {
         expect(shell.top.centerX).toBe(250);
         expect(shell.bottom.centerX).toBe(0);
         expect(shell.slantMax).toBeGreaterThan(shell.slantMin);
+    });
+
+    it('reports the actual seam opening at each end, not just the nominal gap', () => {
+        const params = shellParams({ mode: 'eccentric-cone', gap: 2 });
+        const result = calculateShell(params);
+        const shell = computeRolledShell(params, result)!;
+        expect(shell.gapTop).toBeCloseTo(result.eccentric!.gapTop, 9);
+        expect(shell.gapBottom).toBeCloseTo(result.eccentric!.gapBottom, 9);
+        expect(formatSeamGap(shell)).toBe('2.3 / 1.7');
+
+        // A regular cone removes the gap as a constant development angle too:
+        // the opening scales with the ring radius at each end.
+        const cone = rolled({ mode: 'cone', gap: 2 });
+        const rTop = cone.top.neutralDiameter / 2;
+        const rBottom = cone.bottom.neutralDiameter / 2;
+        expect(cone.gapTop / cone.gapBottom).toBeCloseTo(rTop / rBottom, 9);
+        expect((cone.gapTop + cone.gapBottom) / 2).toBeCloseTo(2, 9);
+
+        expect(formatSeamGap(rolled({ mode: 'cylinder', gap: 2 }))).toBe('2');
     });
 
     it('ignores the eccentricity outside eccentric mode', () => {

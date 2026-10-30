@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { Html, Line } from '@react-three/drei';
 import { useShallow } from 'zustand/react/shallow';
 import { useShellStore } from '../../store/useShellStore';
-import { computeRolledShell, formatDimension } from '../../utils/rolled-shell';
+import { computeRolledShell, formatSeamGap } from '../../utils/rolled-shell';
 import { buildRolledDimensionLayout, type DimensionLabel3D, type Vec2 } from './geometry/buildRolledDimensions';
 
 const DIMENSION_COLOR = '#8fe6d0';
@@ -148,7 +148,7 @@ export const RolledDimensions: React.FC = () => {
                     />
                 ))}
             </group>
-            <Label position={seamPosition} text={`Seam · gap ${formatDimension(shell.gap)}`} align="center" reference />
+            <Label position={seamPosition} text={`Seam · gap ${formatSeamGap(shell)}`} align="center" reference />
         </>
     );
 };

@@ -4,6 +4,7 @@ import { drawFooter, drawFrame, MARGIN, PAGE_WIDTH } from './pdf-sheet';
 import {
     computeRolledShell,
     formatDimension,
+    formatSeamGap,
     referenceDiameter,
     specDiameter,
     type RolledShell
@@ -418,7 +419,7 @@ const drawPlan = (doc: jsPDF, shell: RolledShell, scale: number) => {
     doc.line(seamInner.x - cos * 1.5, seamInner.y + sin * 1.5, seamOuter.x + cos * 1.5, seamOuter.y - sin * 1.5);
 
     const side: 1 | -1 = cos >= -eps ? 1 : -1;
-    const note = `Seam, gap ${formatDimension(shell.gap)}`;
+    const note = `Seam, gap ${formatSeamGap(shell)}`;
     dimensionText(doc);
     const noteWidth = doc.getTextWidth(note) + 2;
     const elbow = {
@@ -457,7 +458,10 @@ const dataRows = (shell: RolledShell): Array<[string, string]> => {
         rows.push(['Seam position (plan)', `${(((shell.seamAngleDeg % 360) + 360) % 360).toFixed(1)}°`]);
     }
 
-    rows.push(['Seam gap', formatDimension(shell.gap)]);
+    rows.push([
+        shell.mode === 'cylinder' ? 'Seam gap' : 'Seam gap top / bottom',
+        formatSeamGap(shell)
+    ]);
     rows.push(['Blank area (mid-surface)', `${(shell.surfaceArea / 1e6).toFixed(3)} m²`]);
     rows.push([`Mass (density ${shell.density} kg/m³)`, `${shell.mass.toFixed(1)} kg`]);
     return rows;

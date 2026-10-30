@@ -29,7 +29,15 @@ export interface RolledShell {
     height: number;
     thickness: number;
     eccentricity: number;
+    /** Specified weld gap: the opening on the neutral fibre at mid-height. */
     gap: number;
+    /**
+     * Actual seam opening at each end on the neutral fibre. Both cone modes cut
+     * the gap as a constant angle of the development, so it scales with the ring
+     * radius: g·2r / (rTop + rBottom). Equal to `gap` for a cylinder.
+     */
+    gapTop: number;
+    gapBottom: number;
     /** Seam centre in plan, degrees. */
     seamAngleDeg: number;
     /** Mid-surface generatrix length; min and max differ only for the eccentric cone. */
@@ -121,6 +129,8 @@ export const computeRolledShell = (
         thickness: params.thickness,
         eccentricity,
         gap: params.gap,
+        gapTop: (params.gap * 2 * rTop) / (rTop + rBottom),
+        gapBottom: (params.gap * 2 * rBottom) / (rTop + rBottom),
         seamAngleDeg,
         slantMin,
         slantMax,
@@ -131,6 +141,12 @@ export const computeRolledShell = (
         density: params.density
     };
 };
+
+/** Seam opening as printed on the drawing: one value, or top / bottom when the ends differ. */
+export const formatSeamGap = (shell: RolledShell): string =>
+    formatDimension(shell.gapTop) === formatDimension(shell.gapBottom)
+        ? formatDimension(shell.gapTop)
+        : `${formatDimension(shell.gapTop)} / ${formatDimension(shell.gapBottom)}`;
 
 /** Formats a length the way the drawing prints it: integers stay bare, the rest gets one decimal. */
 export const formatDimension = (value: number): string => {

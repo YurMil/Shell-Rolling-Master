@@ -29,8 +29,10 @@ All exports are generated in the browser and downloaded (or messaged) locally.
     eccentricity e, wall-thickness note
   - *Top view*: rings (hidden ones dashed), centre lines, cutting plane A-A and a
     seam / gap note at the real seam position
-  - Data table (OD / ID / mean diameters, slant height, wall angle, gap,
-    mid-surface area, mass at the `density` parameter) and a title block
+  - Data table (OD / ID / mean diameters, slant height, wall angle, seam
+    opening at each end, mid-surface area, mass at the `density` parameter) and
+    a title block. Cones remove the gap as a constant development angle, so the
+    opening scales with the ring radius: top and bottom are reported separately
   - Drawn at the largest standard scale that fits (1:1, 1:2, 1:2.5 … 1:5000, or
     enlarged for small parts), stated in the title block
 - Eccentric cone: the station table follows from sheet 3
