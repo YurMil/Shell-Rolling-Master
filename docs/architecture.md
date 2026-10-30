@@ -47,7 +47,7 @@ Technical architecture of Shell Rolling Master (v0.21.0).
 | `src/features/viewer-2d/` | SVG pattern renderers |
 | `src/features/viewer-3d/` | R3F scene, meshes, view cube |
 | `src/cad/` | CAD geometry, worker client, STEP export |
-| `src/utils/` | DXF, PDF, bend lines, solid geometry helpers |
+| `src/utils/` | DXF, PDF (incl. the rolled-part drawing sheet), rolled-part dimensions, bend lines, solid geometry helpers |
 | `src/shareLink.ts` | `postMessage` embed protocol |
 | `src/components/ui/` | Shared UI primitives (`ViewToggle`, `cn`, etc.) |
 

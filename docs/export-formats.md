@@ -20,8 +20,24 @@ All exports are generated in the browser and downloaded (or messaged) locally.
 ## PDF fabrication report
 
 - Page: landscape **A4**
-- Includes: input parameters, neutral dimensions, cutting / blank specification, bend step (when enabled), scaled pattern visualization
+- **Sheet 1:** input parameters, neutral dimensions, cutting / blank specification, bend step (when enabled), scaled pattern visualization
+- **Sheet 2 — rolled part:** a dimensioned drawing of the shell *after rolling*
+  (`src/utils/rolled-part-sheet.ts`):
+  - *Section A-A* through the shell axis (in the eccentricity plane for the
+    eccentric cone): wall drawn solid, the specified diameter (OD or ID) of each
+    ring, the other diameter as a reference dimension in parentheses, height H,
+    eccentricity e, wall-thickness note
+  - *Top view*: rings (hidden ones dashed), centre lines, cutting plane A-A and a
+    seam / gap note at the real seam position
+  - Data table (OD / ID / mean diameters, slant height, wall angle, gap,
+    mid-surface area, mass at the `density` parameter) and a title block
+  - Drawn at the largest standard scale that fits (1:1, 1:2, 1:2.5 … 1:5000, or
+    enlarged for small parts), stated in the title block
+- Eccentric cone: the station table follows from sheet 3
 - Intended for shop floor printouts and job packets
+
+The finished-part numbers come from `src/utils/rolled-shell.ts`, shared with the
+3D dimension overlay, so the drawing and the screen always agree.
 
 Not a substitute for DXF when CNC contour accuracy is required.
 
