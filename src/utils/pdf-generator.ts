@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import type { ShellParameters, CalculationResult } from '../features/calculator/types';
 import { getConePatternAngles, getConePatternPoints } from './cone-pattern';
 import { generateEccentricConeReport } from './eccentric-cone-report';
+import { drawRolledPartSheet } from './rolled-part-sheet';
 
 const drawPolyline = (doc: jsPDF, points: Array<{ x: number; y: number }>) => {
     for (let i = 1; i < points.length; i += 1) {
@@ -254,6 +255,9 @@ export const generatePDF = (params: ShellParameters, result: CalculationResult) 
         align: "right"
     });
     doc.setTextColor(0, 0, 0);
+
+    doc.addPage();
+    drawRolledPartSheet(doc, params, result);
 
     doc.save(`shell-pattern-${params.mode}.pdf`);
 };

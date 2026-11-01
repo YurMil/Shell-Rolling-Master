@@ -41,6 +41,7 @@ browser, WebGL or WASM is needed.
 | `math/eccentric-cone.test.ts` | Development vs. independently known values (`docs/eccentric-cone.md` § 7) |
 | `math/validation.test.ts` | Invalid and boundary input for every mode |
 | `utils/pattern-dimensions.test.ts` | Bend-line spacing dimensions in all three shape modes |
+| `utils/rolled-shell.test.ts` | Rolled-part OD/ID/mass, drawing scale, 3D dimension layout |
 | `shareLink.test.ts` | Share-link round trip, real link payload, hostile input |
 
 Reference values are derived by hand from the closed-form relations in

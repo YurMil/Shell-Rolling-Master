@@ -91,6 +91,12 @@ Cone **reported** sheet dimensions include a **10 mm** cutting margin on the bou
 - Thick open-seam shell derived from neutral geometry and thickness / K-factor offsets
 - Orbit / pan / zoom; auto-fit camera; grid and edge overlays
 - Orientation cube for face / edge / corner viewpoints
+- **Dimensions** toggle (top right, on by default): drawing-style dimensions of
+  the rolled part — specified diameter of each ring, the other diameter in
+  parentheses as a reference, height H, eccentricity e, wall thickness t and the
+  seam gap. For cylinders and cones the dimension plane turns to face the
+  camera; for the eccentric cone it stays in the eccentricity plane. The same
+  numbers appear on sheet 2 of the PDF report
 
 ### 2D Pattern
 
@@ -102,7 +108,7 @@ Cone **reported** sheet dimensions include a **10 mm** cutting margin on the bou
 
 | Format | Typical use |
 |--------|-------------|
-| **PDF** | Shop fabrication report (inputs, neutrals, cutting data, pattern sketch) |
+| **PDF** | Shop fabrication report (inputs, neutrals, cutting data, pattern sketch) plus a dimensioned drawing of the rolled part on sheet 2 |
 | **DXF** | CNC / CAD blank outline (+ optional bend and dimension layers) |
 | **STEP** | Thick open-seam solid for CAD (browser OpenCascade WASM) |
 

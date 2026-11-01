@@ -5,8 +5,11 @@ import { OrbitControls } from '@react-three/drei';
 import { ShellMesh } from './ShellMesh';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { Ruler } from 'lucide-react';
 import { ViewCube } from './ViewCube';
+import { RolledDimensions } from './RolledDimensions';
 import { useShellStore } from '../../store/useShellStore';
+import { cn } from '../../components/ui/cn';
 
 // Camera controller that handles auto-fit and view changes
 const CameraController: React.FC<{
@@ -26,6 +29,8 @@ const CameraController: React.FC<{
     const fitCamera = useCallback((): boolean => {
         let shellBox: THREE.Box3 | null = null;
         scene.traverse((obj) => {
+            // Dimension annotations are not part of the shell: fit to the model alone.
+            if (obj.userData.noFit) return;
             if (obj.type === 'Mesh' && obj.geometry && obj.geometry.attributes.position) {
                 const box = new THREE.Box3().setFromObject(obj);
                 if (!shellBox) {
@@ -138,6 +143,8 @@ export const Scene: React.FC = () => {
     const [cameraQuaternion, setCameraQuaternion] = useState(() => new THREE.Quaternion());
     const [viewPosition, setViewPosition] = useState<[number, number, number] | null>(null);
     const controlsRef = useRef<OrbitControlsImpl | null>(null);
+    const showDimensions = useShellStore((s) => s.showDimensions3d);
+    const setShowDimensions = useShellStore((s) => s.setShowDimensions3d);
 
     const handleCameraUpdate = useCallback((quaternion: THREE.Quaternion) => {
         setCameraQuaternion(quaternion);
@@ -169,6 +176,7 @@ export const Scene: React.FC = () => {
 
                 {/* Main Geometry */}
                 <ShellMesh />
+                {showDimensions && <RolledDimensions />}
 
                 {/* Controls */}
                 <OrbitControls
@@ -187,6 +195,20 @@ export const Scene: React.FC = () => {
                     controlsRef={controlsRef}
                 />
             </Canvas>
+
+            {/* Dimensions toggle - Top Right Corner */}
+            <button
+                onClick={() => setShowDimensions(!showDimensions)}
+                title="Show the dimensions of the part after rolling"
+                className={cn(
+                    "absolute top-16 right-4 z-20 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium shadow-xl border border-[#49454f] transition-all",
+                    showDimensions
+                        ? "bg-[#49454f] text-[#d0bcff]"
+                        : "bg-[#2b2930] text-[#938f99] hover:text-[#e6e1e5]"
+                )}
+            >
+                <Ruler className="w-4 h-4" /> Dimensions
+            </button>
 
             {/* ViewCube Overlay - Bottom Right Corner */}
             <ViewCube

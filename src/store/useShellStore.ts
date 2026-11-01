@@ -7,6 +7,8 @@ import { MAX_STATIONS, MIN_STATIONS } from '../features/calculator/math/eccentri
 interface ShellState extends ShellParameters {
     results: CalculationResult;
     viewMode: '3d' | '2d';
+    /** Drawing-style dimensions of the rolled part in the 3D view. */
+    showDimensions3d: boolean;
 
     // Actions
     setMode: (mode: ShapeType) => void;
@@ -27,6 +29,7 @@ interface ShellState extends ShellParameters {
     setBendDimensionsEnabled: (val: boolean) => void;
     setBendDimensionOffset: (val: number) => void;
     setViewMode: (mode: '3d' | '2d') => void;
+    setShowDimensions3d: (val: boolean) => void;
     recalc: () => void;
 }
 
@@ -53,6 +56,7 @@ const initialParams: ShellParameters = {
 export const useShellStore = create<ShellState>((set, get) => ({
     ...initialParams,
     viewMode: '3d',
+    showDimensions3d: true,
     results: calculateShell(initialParams),
 
     setMode: (mode) => {
@@ -146,6 +150,9 @@ export const useShellStore = create<ShellState>((set, get) => ({
 
     setViewMode: (viewMode) => {
         set({ viewMode });
+    },
+    setShowDimensions3d: (showDimensions3d) => {
+        set({ showDimensions3d });
     },
 
     recalc: () => {

@@ -1,40 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { CalculationResult, Point2D, ShellParameters } from '../features/calculator/types';
-
-const PAGE_WIDTH = 297;
-const PAGE_HEIGHT = 210;
-const MARGIN = 10;
-
-const drawFrame = (doc: jsPDF, title: string, subtitle: string) => {
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, 'F');
-
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
-    doc.rect(MARGIN, MARGIN, PAGE_WIDTH - 2 * MARGIN, PAGE_HEIGHT - 2 * MARGIN);
-
-    doc.setTextColor(0);
-    doc.setFontSize(15);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, MARGIN + 5, MARGIN + 11);
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(90);
-    doc.text(subtitle, PAGE_WIDTH - MARGIN - 5, MARGIN + 11, { align: 'right' });
-    doc.setTextColor(0);
-};
-
-const drawFooter = (doc: jsPDF) => {
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(30, 64, 175);
-    doc.textWithLink('cadautoscript.com', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 10, {
-        url: 'https://cadautoscript.com',
-        align: 'right'
-    });
-    doc.setTextColor(0);
-};
+import { drawFrame, drawFooter, MARGIN, PAGE_HEIGHT } from './pdf-sheet';
+import { drawRolledPartSheet } from './rolled-part-sheet';
 
 /** Draws the development inside the given box, keeping the aspect ratio (fit, not 1:1). */
 const drawDevelopment = (
@@ -135,7 +102,6 @@ const drawStationTable = (doc: jsPDF, params: ShellParameters, result: Calculati
     const startX = MARGIN + 6;
 
     let row = 0;
-    let page = 0;
 
     const drawHeader = () => {
         doc.setFont('helvetica', 'bold');
@@ -153,12 +119,11 @@ const drawStationTable = (doc: jsPDF, params: ShellParameters, result: Calculati
 
     for (const station of development.stations) {
         if (row % maxRows === 0) {
-            page += 1;
             doc.addPage();
             drawFrame(
                 doc,
                 'Eccentric cone - layout stations',
-                `${params.d1} / ${params.d2} x ${params.h}, e = ${params.eccentricity} mm - sheet ${page}`
+                `${params.d1} / ${params.d2} x ${params.h}, e = ${params.eccentricity} mm - sheet ${doc.getNumberOfPages()}`
             );
             drawFooter(doc);
             drawHeader();
@@ -266,6 +231,9 @@ export const generateEccentricConeReport = (params: ShellParameters, result: Cal
     doc.setTextColor(0);
     doc.setFont('helvetica', 'normal');
     drawFooter(doc);
+
+    doc.addPage();
+    drawRolledPartSheet(doc, params, result);
 
     drawStationTable(doc, params, result);
 
