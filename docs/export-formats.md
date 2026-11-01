@@ -2,15 +2,19 @@
 
 Interchange and delivery formats produced by Shell Rolling Master.
 
+Eccentric-cone layers, the station table and the STEP loft are specified in
+[eccentric cone § 5](./eccentric-cone.md#5-exports). The parameter list shared
+with a host page is the [domain model](./domain-model.md#shared-params-embed-protocol).
+
 ---
 
 ## Overview
 
 | Format | Generator | Contents | Filename pattern |
 |--------|-----------|----------|------------------|
-| PDF | `src/utils/pdf-generator.ts` (jsPDF) | Fabrication report + pattern sketch | `shell-pattern-{mode}.pdf` |
-| DXF | `src/utils/dxf-writer.ts` | Flat blank outline + optional bend lines | `shell-pattern-{mode}.dxf` |
-| STEP | CAD worker (`replicad` / OpenCascade) | Thick open-seam solid | `shell-rolling-{mode}_D…_H…_T….step` |
+| PDF | `src/utils/pdf-generator.ts` (jsPDF); eccentric cone delegates to `eccentric-cone-report.ts` | Fabrication report + pattern sketch. Eccentric cone adds a station table | `shell-pattern-{mode}.pdf`, or `eccentric-cone_D{D1}-{D2}_H{H}_e{e}.pdf` |
+| DXF | `src/utils/dxf-writer.ts` | Flat blank outline + optional bend lines. Eccentric cone is one closed polyline | `shell-pattern-{mode}.dxf`, or `eccentric-cone_D{D1}-{D2}_H{H}_e{e}.dxf` |
+| STEP | CAD worker (`replicad` / OpenCascade) | Thick shell. Eccentric cone is a ruled loft | `shell-rolling-{mode}_D…_H…_T….step` (eccentric filenames also include `_e{e}`) |
 | Share state | `src/shareLink.ts` | Input parameters only (JSON via `postMessage`) | Host URL (`?calc=` on parent) |
 
 All exports are generated in the browser and downloaded (or messaged) locally.
@@ -58,6 +62,16 @@ ASCII DXF entities:
 - Two **ARC** entities (outer and inner radii)
 - Two radial **LINE** entities (sector edges)
 
+### Eccentric cone (`shape: 'freeform'`)
+
+- One closed R12 **POLYLINE** on layer `CONTOUR`: bottom edge, then the top edge reversed. The seams are the two ends of that polyline
+- Station numbers on layer `MARKS`
+- Interior rulings on `BEND` when bend lines are enabled
+- Padded blank rectangle on layer `SHEET`
+- Chord dimensions on `BEND_DIMS` when bend lines and bend dimensions are both enabled
+
+Layer contents, the 720-node contour versus the station marks, and the filename are in [eccentric cone § 5.1](./eccentric-cone.md#51-dxf-11-millimetres).
+
 ### Bend lines (optional)
 
 - Drawn on a dashed red layer named **`BEND`**
@@ -65,14 +79,14 @@ ASCII DXF entities:
 
 ### Bend-line dimensions (optional)
 
-Available in **every** shape mode when bend lines are enabled.
+Available in **every** shape mode when bend lines and **Dimension bend-line spacing** are both enabled.
 
 - Layer **`BEND_DIMS`**
 - Aligned (parallel) dimensions of the spacing between consecutive bend-line
   endpoints, plus the length of both seam edges
 - Cylinder: one run along the blank — the two edges are parallel, so a second
   run would repeat the same numbers. Cone and eccentric cone: one run per edge,
-  because the two arcs have different chord lengths
+  because the two edges have different chord lengths ([eccentric cone § 5.1](./eccentric-cone.md#51-dxf-11-millimetres))
 - Built from plain R12 primitives (extension lines, dimension line, ticks and a
   centred `TEXT` via group codes 72/11/21) — no blocks, no `DIMENSION` entities
 - Geometry comes from `src/utils/pattern-dimensions.ts`, shared with the 2D
@@ -91,14 +105,14 @@ Available in **every** shape mode when bend lines are enabled.
 
 ### Purpose
 
-Export a CAD-ready **thick** cylindrical or conical shell with an open seam for verification, nesting prep in 3D, or downstream CAD workflows.
+Export a CAD-ready **thick** cylindrical, conical, or eccentric shell for verification, nesting prep in 3D, or downstream CAD workflows. Cylinder and straight cone are open-seam. An eccentric cone with a positive gap is an open ruled loft; with gap 0 it is a closed shell ([eccentric cone § 5.3](./eccentric-cone.md#53-step)).
 
 ### Pipeline
 
 1. UI validates that calculation results are available.
 2. `computeShellCadGeometry` maps neutrals, thickness, K-factor, and gap to CAD radii and seam angle.
 3. Web Worker initializes OpenCascade WASM (first use / warmup).
-4. `build-shell-solid` constructs a closed XZ trapezoidal profile, **revolves** about Z, then **subtracts** an extruded wedge for the seam gap.
+4. For cylinder and straight cone, `build-shell-solid` constructs a closed XZ trapezoidal profile, **revolves** it about Z, then **subtracts** an extruded wedge for the seam gap. For an eccentric cone, `build-eccentric-cone-solid` lofts the open annular sectors on the same angles as the development. A boolean cut is used only when the eccentric gap is 0.
 5. `solid.blobSTEP()` returns an `ArrayBuffer`; the UI triggers a file download.
 
 ### Filename example
@@ -106,6 +120,7 @@ Export a CAD-ready **thick** cylindrical or conical shell with an open seam for 
 ```text
 shell-rolling-cone_D2000-1500_H2500_T15.step
 shell-rolling-cylinder_D2000_H2500_T15.step
+shell-rolling-eccentric-cone_D2000-1500_e250_H2500_T15.step
 ```
 
 ### Progress stages
@@ -118,7 +133,7 @@ shell-rolling-cylinder_D2000_H2500_T15.step
 
 ### Limitations
 
-- Open-seam topology only (gap may be `0`, but construction remains a cut shell).
+- Cylinder and straight-cone topology stays an open seam even when the gap is 0. An eccentric cone with gap 0 is closed.
 - Discrete CAD kernel; first export may be slow on low-end devices.
 - Not a manufacturing NC program — geometry verification / CAD interchange only.
 

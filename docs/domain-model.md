@@ -2,8 +2,10 @@
 
 Canonical types and state fields used by Shell Rolling Master.
 
-Primary definition: `src/features/calculator/types.ts`  
-Store: `src/store/useShellStore.ts`
+Primary definition: [`src/features/calculator/types.ts`](../src/features/calculator/types.ts)
+Store: [`src/store/useShellStore.ts`](../src/store/useShellStore.ts)
+
+The eccentric-cone development is specified in [eccentric-cone.md](./eccentric-cone.md). Share-link rules are in [export formats](./export-formats.md#share-state-protocol).
 
 ---
 
@@ -93,9 +95,9 @@ Output of `calculateShell` (via cylinder / cone math modules).
 | `error` | `string?` | Human-readable failure reason |
 | `d1_neutral` | `number` | Neutral diameter at end 1 |
 | `d2_neutral` | `number` | Neutral diameter at end 2 |
-| `flatLength` | `number` | Developed length (cylinder) or padded bbox width (cone) |
-| `flatWidth` | `number` | Blank height (cylinder) or padded bbox height (cone) |
-| `shape` | `'rect' \| 'sector'` | Pattern topology |
+| `flatLength` | `number` | Developed length (cylinder) or padded bbox width (both cone modes) |
+| `flatWidth` | `number` | Blank height (cylinder) or padded bbox height (both cone modes) |
+| `shape` | `'rect' \| 'sector' \| 'freeform'` | Pattern topology. `freeform` is the eccentric cone |
 | `angle` | `number?` | Cone sector angle (degrees) |
 | `rOut` | `number?` | Cone outer pattern radius |
 | `rIn` | `number?` | Cone inner pattern radius |
@@ -106,6 +108,9 @@ Output of `calculateShell` (via cylinder / cone math modules).
 | `bboxHeight` | `number?` | Reported bounding height |
 | `bboxMinX` | `number?` | Bounding box origin X |
 | `bboxMinY` | `number?` | Bounding box origin Y |
+| `eccentric` | `EccentricDevelopment?` | Edges, stations, rulings, area, gaps, residual, warnings. Present for a valid eccentric cone |
+
+`EccentricStation` is one row of the layout table: index, `φ` in degrees, ruling length, developed distance from the seam along each edge, the chord to the next station, and the blank coordinates of both ends. Field comments are in [`types.ts`](../src/features/calculator/types.ts). The geometry those numbers come from is [eccentric cone § 2](./eccentric-cone.md#2-mathematics).
 
 ### BendLine
 
@@ -136,13 +141,17 @@ STEP export packages a subset of parameters with a valid `CalculationResult`:
 
 ```ts
 interface ShellCadSource {
-  params: Pick<ShellParameters, 'mode' | 'h' | 'thickness' | 'gap' | 'kFactor'>;
+  params: Pick<ShellParameters,
+    'mode' | 'h' | 'thickness' | 'gap' | 'kFactor' | 'eccentricity' | 'seamPosition' | 'seamAngleDeg'>;
   results: CalculationResult;
 }
 ```
 
-Geometry derivation: `src/cad/geometry/compute-shell-cad-geometry.ts`  
-Solid build: `src/cad/geometry/build-shell-solid.ts`
+`ShellCadGeometry` is `{ kind: 'revolved' }` or `{ kind: 'eccentric' }` ([`cad-types.ts`](../src/cad/types/cad-types.ts)).
+
+Geometry derivation: [`compute-shell-cad-geometry.ts`](../src/cad/geometry/compute-shell-cad-geometry.ts)
+Revolved solid: [`build-shell-solid.ts`](../src/cad/geometry/build-shell-solid.ts)
+Eccentric loft: [`build-eccentric-cone-solid.ts`](../src/cad/geometry/build-eccentric-cone-solid.ts) ([spec § 5.3](./eccentric-cone.md#53-step))
 
 ---
 
@@ -171,8 +180,10 @@ restore. See [export-formats.md](./export-formats.md#share-state-protocol).
 validateBaseParams
   → calculateNeutralDiameters
   → validateNeutralThickness
-  → calculateCylinder | calculateCone
+  → calculateCylinder | calculateCone | calculateEccentricCone
   → CalculationResult
 ```
+
+Neutral diameters and the thickness check are [calculations § 1](./calculations.md#1-neutral-fibre). The eccentric branch is [eccentric-cone.md](./eccentric-cone.md).
 
 Orchestration lives in the calculator math index and the Zustand store setters, which sanitize fields and invoke recalculation after each change.
